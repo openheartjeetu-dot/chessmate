@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Chessmate</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0;
+      background: #1a1a2e;
+      color: white;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px;
+      min-height: 100vh;
+      user-select: none;
+    }
+    h1 { margin: 0 0 6px; font-size: 30px; }
+    #status { opacity: 0.85; margin-bottom: 12px; font-size: 16px; }
+    #board {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      grid-auto-rows: 1fr;
+      border: 3px solid #444;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .sq {
+      aspect-ratio: 1 / 1;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      line-height: 1;
+    }
+    .light { background: #eed7b5; }
+    .dark { background: #b07d56; }
+    .sel { box-shadow: inset 0 0 0 4px #f7ec59; }
+    .hint::after {
+      content: '';
+      position: absolute;
+      width: 28%; height: 28%;
+      background: rgba(0,0,0,0.28);
+      border-radius: 50%;    }
+    .piece-w { color: #fff; text-shadow: 0 0 2px #000, 0 1px 2px #000; }
+    .piece-b { color: #222; text-shadow: 0 1px 1px rgba(255,255,255,0.3); }
+    button {
+      margin-top: 18px;
+      padding: 12px 28px;
+      border-radius: 8px;
+      border: none;
+      background: #e94560;
+      color: white;
+      font-size: 17px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <h1>♟ Chessmate</h1>
+  <div id="status">White's turn</div>
+  <div id="board"></div>
+  <button onclick="resetGame()">New Game</button>
+
+  <script>
+    var game = new Chess();
+    var selected = null;
+    var PIECES = {
+      'wK':'♔','wQ':'♕','wR':'♖','wB':'♗','wN':'♘','wP':'♙',
+      'bK':'♚','bQ':'♛','bR':'♜','bB':'♝','bN':'♞','bP':'♟'
+    };
+
+    function sizeBoard() {
+      // Bigger board: nearly full screen width, capped at 560 for tablets
+      var w = Math.min(window.innerWidth - 16, 560);
+      var board = document.getElementById('board');
+      board.style.width = w + 'px';
+      // Height is forced by aspect-ratio:1 on each square — no JS height needed
+      var sqSize = w / 8;
+      var cells = document.querySelectorAll('.sq');
+      for (var i = 0; i < cells.length; i++) {
+        cells[i].style.fontSize = (sqSize * 0.82) + 'px';
+      }
+    }
+
+    function render() {
+      var board = document.getElementById('board');
+      board.innerHTML = '';
+      var pos = game.board();
+      for (var r = 0; r < 8; r++) {
+        for (var c = 0; c < 8; c++) {
+          var sq = document.createElement('div');
+          var coord = 'abcdefgh'[c] + (8 - r);          sq.className = 'sq ' + ((r + c) % 2 === 0 ? 'light' : 'dark');
+          sq.dataset.sq = coord;
+          var p = pos[r][c];
+          if (p) {
+            var key = (p.color === 'w' ? 'w' : 'b') + p.type.toUpperCase();
+            sq.textContent = PIECES[key];
+            sq.classList.add(p.color === 'w' ? 'piece-w' : 'piece-b');
+          }
+          if (selected === coord) sq.classList.add('sel');
+          if (selected) {
+            var moves = game.moves({ square: selected, verbose: true });
+            if (moves.some(function(m){ return m.to === coord; })) sq.classList.add('hint');
+          }
+          sq.onclick = function(){ tap(this.dataset.sq); };
+          board.appendChild(sq);
+        }
+      }
+      sizeBoard();
+      updateStatus();
+    }
+
+    function tap(sq) {
+      if (selected === sq) { selected = null; render(); return; }
+      if (selected) {
+        var move = game.move({ from: selected, to: sq, promotion: 'q' });
+        if (move !== null) { selected = null; render(); return; }
+      }
+      var piece = game.get(sq);
+      if (piece && piece.color === game.turn()) { selected = sq; }
+      else { selected = null; }
+      render();
+    }
+
+    function updateStatus() {
+      var s = game.turn() === 'w' ? "White's turn" : "Black's turn";
+      if (game.in_checkmate()) s = 'Checkmate! ' + (game.turn() === 'w' ? 'Black wins 🎉' : 'White wins 🎉');
+      else if (game.in_draw()) s = 'Draw!';
+      else if (game.in_check()) s += ' — Check!';
+      document.getElementById('status').innerText = s;
+    }
+
+    function resetGame() { game.reset(); selected = null; render(); }
+
+    window.addEventListener('resize', sizeBoard);
+    render();
+  </script>
+</body>
+</html>
