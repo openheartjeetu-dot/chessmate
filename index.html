@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Chessmate</title>
+  <title>Chessmate — Multiplayer</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body {
@@ -20,7 +21,7 @@
       user-select: none;
     }
     h1 { margin: 0 0 6px; font-size: 30px; }
-    #status { opacity: 0.85; margin-bottom: 12px; font-size: 16px; }
+    #status { opacity: 0.85; margin-bottom: 12px; font-size: 16px; text-align: center; min-height: 20px; }
     #board {
       display: grid;
       grid-template-columns: repeat(8, 1fr);
@@ -46,12 +47,12 @@
       content: '';
       position: absolute;
       width: 28%; height: 28%;
-      background: rgba(0,0,0,0.28);
-      border-radius: 50%;    }
+      background: rgba(0,0,0,0.28);      border-radius: 50%;
+    }
     .piece-w { color: #fff; text-shadow: 0 0 2px #000, 0 1px 2px #000; }
     .piece-b { color: #222; text-shadow: 0 1px 1px rgba(255,255,255,0.3); }
-    button {
-      margin-top: 18px;
+    .btn {
+      margin: 8px;
       padding: 12px 28px;
       border-radius: 8px;
       border: none;
@@ -59,29 +60,215 @@
       color: white;
       font-size: 17px;
       font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-secondary { background: #4a4a6a; }
+    input {
+      padding: 12px 20px;
+      border-radius: 8px;
+      border: 2px solid #444;
+      background: #2a2a3e;
+      color: white;
+      font-size: 18px;
+      text-align: center;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      width: 200px;
+    }
+    .screen { display: none; flex-direction: column; align-items: center; width: 100%; }
+    .screen.active { display: flex; }
+    .code-display {
+      background: #2a2a3e;
+      padding: 16px 24px;
+      border-radius: 8px;
+      font-size: 32px;
+      letter-spacing: 6px;
+      margin: 12px 0;
+      font-weight: bold;
+    }
+    #connection-status {
+      font-size: 12px;
+      opacity: 0.6;
+      margin-top: 8px;
     }
   </style>
 </head>
 <body>
-  <h1>♟ Chessmate</h1>
-  <div id="status">White's turn</div>
-  <div id="board"></div>
-  <button onclick="resetGame()">New Game</button>
+  <!-- HOME SCREEN -->
+  <div id="home-screen" class="screen active">
+    <h1>♟ Chessmate</h1>    <p style="opacity:0.7; margin:8px 0 24px;">Real-time chess with friends</p>
+    <button class="btn" onclick="createGame()">🎮 Create Game</button>
+    <div style="margin:20px 0; opacity:0.5;">— or —</div>
+    <p style="margin:0 0 8px;">Join with code:</p>
+    <input type="text" id="join-code-input" maxlength="6" placeholder="ABC123">
+    <button class="btn btn-secondary" onclick="joinFromInput()" style="margin-top:12px;">Join Game</button>
+  </div>
+
+  <!-- LOBBY SCREEN -->
+  <div id="lobby-screen" class="screen">
+    <h1>♟ Chessmate</h1>
+    <p style="opacity:0.7;">Share this code with your opponent:</p>
+    <div class="code-display" id="game-code-display"></div>
+    <button class="btn" onclick="shareGame()">📤 Share via WhatsApp</button>
+    <p id="lobby-status" style="margin:16px 0; font-size:14px;">Waiting for opponent...</p>
+    <button class="btn btn-secondary" onclick="goHome()">← Back</button>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="game-screen" class="screen">
+    <h1>♟ Chessmate</h1>
+    <div id="status">Connecting...</div>
+    <div id="board"></div>
+    <div style="display:flex; gap:8px; margin-top:16px;">
+      <button class="btn" onclick="requestReset()">🔄 New Game</button>
+      <button class="btn btn-secondary" onclick="leaveGame()">🚪 Leave</button>
+    </div>
+    <div id="connection-status"></div>
+  </div>
 
   <script>
+    // ===== SUPABASE CONFIG =====
+    const SUPABASE_URL = 'https://rcbmfpqvxxqnfjugedpg.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJjYm1mcHF2eHhxbmZqdWdlZHBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4NTA0NzksImV4cCI6MjEwMTQyNjQ3OX0.7Xgr3zwaVFxQ4Mrg1nZ5JsJqFljeHBIIxP_eZTRDbQc';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // ===== GAME STATE =====
     var game = new Chess();
     var selected = null;
+    var myColor = 'w'; // 'w' or 'b'
+    var gameCode = null;
+    var channel = null;
+    var isCreator = false;
+    var opponentJoined = false;
+
     var PIECES = {
       'wK':'♔','wQ':'♕','wR':'♖','wB':'♗','wN':'♘','wP':'♙',
       'bK':'♚','bQ':'♛','bR':'♜','bB':'♝','bN':'♞','bP':'♟'
     };
+    // ===== SCREEN MANAGEMENT =====
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
 
+    function goHome() {
+      if (channel) { channel.unsubscribe(); channel = null; }
+      gameCode = null;
+      opponentJoined = false;
+      showScreen('home-screen');
+    }
+
+    // ===== GAME CODE GENERATION =====
+    function generateCode() {
+      return Math.random().toString(36).substring(2, 8).toUpperCase();
+    }
+
+    // ===== CREATE GAME =====
+    function createGame() {
+      gameCode = generateCode();
+      isCreator = true;
+      myColor = 'w';
+      document.getElementById('game-code-display').textContent = gameCode;
+      document.getElementById('lobby-status').textContent = 'Waiting for opponent...';
+      showScreen('lobby-screen');
+      joinChannel();
+    }
+
+    // ===== JOIN GAME =====
+    function joinFromInput() {
+      var code = document.getElementById('join-code-input').value.trim().toUpperCase();
+      if (code.length !== 6) { alert('Enter a 6-character code'); return; }
+      gameCode = code;
+      isCreator = false;
+      myColor = 'b';
+      showScreen('game-screen');
+      joinChannel();
+      // Announce join
+      channel.send({ type: 'broadcast', event: 'join', payload: {} });
+    }
+
+    function joinFromURL(code) {
+      gameCode = code;
+      isCreator = false;
+      myColor = 'b';
+      showScreen('game-screen');
+      joinChannel();
+      channel.send({ type: 'broadcast', event: 'join', payload: {} });
+    }
+    // ===== SHARE GAME =====
+    function shareGame() {
+      var url = window.location.origin + window.location.pathname + '?code=' + gameCode;
+      var text = `Play chess with me on Chessmate! 🎮\nCode: ${gameCode}\n${url}`;
+      var whatsapp = `https://wa.me/?text=${encodeURIComponent(text)}`;
+      window.open(whatsapp, '_blank');
+    }
+
+    // ===== REALTIME CHANNEL =====
+    function joinChannel() {
+      channel = supabase.channel('chess-' + gameCode);
+      
+      channel.on('broadcast', { event: 'move' }, ({ payload }) => {
+        var move = game.move(payload);
+        if (move) {
+          render();
+          updateStatus();
+        }
+      });
+
+      channel.on('broadcast', { event: 'join' }, () => {
+        opponentJoined = true;
+        if (isCreator) {
+          showScreen('game-screen');
+          document.getElementById('connection-status').textContent = '✅ Opponent joined!';
+        }
+      });
+
+      channel.on('broadcast', { event: 'reset' }, () => {
+        game.reset();
+        selected = null;
+        render();
+        updateStatus();
+      });
+
+      channel.on('broadcast', { event: 'reset-request' }, () => {
+        if (confirm('Opponent wants a new game. Accept?')) {
+          channel.send({ type: 'broadcast', event: 'reset', payload: {} });
+          game.reset();
+          selected = null;
+          render();
+          updateStatus();
+        }
+      });
+
+      channel.subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('Connected to game:', gameCode);
+          if (!isCreator) {            document.getElementById('connection-status').textContent = '✅ Connected!';
+          }
+        }
+      });
+    }
+
+    function leaveGame() {
+      goHome();
+    }
+
+    function requestReset() {
+      if (opponentJoined || !isCreator) {
+        channel.send({ type: 'broadcast', event: 'reset-request', payload: {} });
+      } else {
+        game.reset();
+        selected = null;
+        render();
+        updateStatus();
+      }
+    }
+
+    // ===== BOARD RENDERING =====
     function sizeBoard() {
-      // Bigger board: nearly full screen width, capped at 560 for tablets
       var w = Math.min(window.innerWidth - 16, 560);
       var board = document.getElementById('board');
       board.style.width = w + 'px';
-      // Height is forced by aspect-ratio:1 on each square — no JS height needed
       var sqSize = w / 8;
       var cells = document.querySelectorAll('.sq');
       for (var i = 0; i < cells.length; i++) {
@@ -93,12 +280,19 @@
       var board = document.getElementById('board');
       board.innerHTML = '';
       var pos = game.board();
-      for (var r = 0; r < 8; r++) {
-        for (var c = 0; c < 8; c++) {
+      
+      // Flip board if playing black
+      var rowOrder = myColor === 'b' ? [7,6,5,4,3,2,1,0] : [0,1,2,3,4,5,6,7];
+      var colOrder = myColor === 'b' ? [7,6,5,4,3,2,1,0] : [0,1,2,3,4,5,6,7];
+      
+      for (var ri = 0; ri < 8; ri++) {
+        for (var ci = 0; ci < 8; ci++) {
+          var r = rowOrder[ri];
+          var c = colOrder[ci];
           var sq = document.createElement('div');
-          var coord = 'abcdefgh'[c] + (8 - r);          sq.className = 'sq ' + ((r + c) % 2 === 0 ? 'light' : 'dark');
-          sq.dataset.sq = coord;
-          var p = pos[r][c];
+          var coord = 'abcdefgh'[c] + (8 - r);
+          sq.className = 'sq ' + ((r + c) % 2 === 0 ? 'light' : 'dark');
+          sq.dataset.sq = coord;          var p = pos[r][c];
           if (p) {
             var key = (p.color === 'w' ? 'w' : 'b') + p.type.toUpperCase();
             sq.textContent = PIECES[key];
@@ -114,18 +308,32 @@
         }
       }
       sizeBoard();
-      updateStatus();
     }
 
     function tap(sq) {
+      // Can't move if not your turn
+      if (game.turn() !== myColor) return;
+      // Can't move until opponent joins (if creator)
+      if (isCreator && !opponentJoined) return;
+      
       if (selected === sq) { selected = null; render(); return; }
       if (selected) {
         var move = game.move({ from: selected, to: sq, promotion: 'q' });
-        if (move !== null) { selected = null; render(); return; }
+        if (move !== null) {
+          // Broadcast move to opponent
+          channel.send({ type: 'broadcast', event: 'move', payload: { from: move.from, to: move.to, promotion: move.promotion || 'q' } });
+          selected = null;
+          render();
+          updateStatus();
+          return;
+        }
       }
       var piece = game.get(sq);
-      if (piece && piece.color === game.turn()) { selected = sq; }
-      else { selected = null; }
+      if (piece && piece.color === game.turn() && piece.color === myColor) {
+        selected = sq;
+      } else {
+        selected = null;
+      }
       render();
     }
 
@@ -133,14 +341,20 @@
       var s = game.turn() === 'w' ? "White's turn" : "Black's turn";
       if (game.in_checkmate()) s = 'Checkmate! ' + (game.turn() === 'w' ? 'Black wins 🎉' : 'White wins 🎉');
       else if (game.in_draw()) s = 'Draw!';
-      else if (game.in_check()) s += ' — Check!';
+      else if (game.in_check()) s += ' — Check!';      
+      if (isCreator && !opponentJoined) s = 'Waiting for opponent...';
       document.getElementById('status').innerText = s;
     }
 
-    function resetGame() { game.reset(); selected = null; render(); }
-
+    // ===== INIT =====
     window.addEventListener('resize', sizeBoard);
-    render();
+    
+    // Check URL for game code
+    var urlParams = new URLSearchParams(window.location.search);
+    var codeFromURL = urlParams.get('code');
+    if (codeFromURL && codeFromURL.length === 6) {
+      joinFromURL(codeFromURL);
+    }
   </script>
 </body>
 </html>
