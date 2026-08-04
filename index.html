@@ -87,16 +87,17 @@
       font-weight: bold;
     }
     #connection-status {
-      font-size: 12px;
-      opacity: 0.6;
+      font-size: 13px;
+      opacity: 0.7;
       margin-top: 8px;
+      text-align: center;
     }
   </style>
 </head>
 <body>
   <!-- HOME SCREEN -->
-  <div id="home-screen" class="screen active">
-    <h1>♟ Chessmate</h1>    <p style="opacity:0.7; margin:8px 0 24px;">Real-time chess with friends</p>
+  <div id="home-screen" class="screen active">    <h1>♟ Chessmate</h1>
+    <p style="opacity:0.7; margin:8px 0 24px;">Real-time chess with friends</p>
     <button class="btn" onclick="createGame()">🎮 Create Game</button>
     <div style="margin:20px 0; opacity:0.5;">— or —</div>
     <p style="margin:0 0 8px;">Join with code:</p>
@@ -111,7 +112,8 @@
     <div class="code-display" id="game-code-display"></div>
     <button class="btn" onclick="shareGame()">📤 Share via WhatsApp</button>
     <p id="lobby-status" style="margin:16px 0; font-size:14px;">Waiting for opponent...</p>
-    <button class="btn btn-secondary" onclick="goHome()">← Back</button>
+    <div id="connection-status"></div>
+    <button class="btn btn-secondary" onclick="goHome()" style="margin-top:12px;">← Back</button>
   </div>
 
   <!-- GAME SCREEN -->
@@ -135,7 +137,7 @@
     // ===== GAME STATE =====
     var game = new Chess();
     var selected = null;
-    var myColor = 'w'; // 'w' or 'b'
+    var myColor = 'w';
     var gameCode = null;
     var channel = null;
     var isCreator = false;
@@ -143,9 +145,8 @@
 
     var PIECES = {
       'wK':'♔','wQ':'♕','wR':'♖','wB':'♗','wN':'♘','wP':'♙',
-      'bK':'♚','bQ':'♛','bR':'♜','bB':'♝','bN':'♞','bP':'♟'
-    };
-    // ===== SCREEN MANAGEMENT =====
+      'bK':'♚','bQ':'♛','bR':'♜','bB':'♝','bN':'♞','bP':'♟'    };
+
     function showScreen(id) {
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
       document.getElementById(id).classList.add('active');
@@ -158,23 +159,21 @@
       showScreen('home-screen');
     }
 
-    // ===== GAME CODE GENERATION =====
     function generateCode() {
       return Math.random().toString(36).substring(2, 8).toUpperCase();
     }
 
-    // ===== CREATE GAME =====
     function createGame() {
       gameCode = generateCode();
       isCreator = true;
       myColor = 'w';
       document.getElementById('game-code-display').textContent = gameCode;
       document.getElementById('lobby-status').textContent = 'Waiting for opponent...';
+      document.getElementById('connection-status').textContent = '🔄 Connecting to server...';
       showScreen('lobby-screen');
       joinChannel();
     }
 
-    // ===== JOIN GAME =====
     function joinFromInput() {
       var code = document.getElementById('join-code-input').value.trim().toUpperCase();
       if (code.length !== 6) { alert('Enter a 6-character code'); return; }
@@ -182,9 +181,9 @@
       isCreator = false;
       myColor = 'b';
       showScreen('game-screen');
+      document.getElementById('connection-status').textContent = '🔄 Connecting...';
+      render(); // Show board immediately
       joinChannel();
-      // Announce join
-      channel.send({ type: 'broadcast', event: 'join', payload: {} });
     }
 
     function joinFromURL(code) {
@@ -192,45 +191,50 @@
       isCreator = false;
       myColor = 'b';
       showScreen('game-screen');
+      document.getElementById('connection-status').textContent = '🔄 Connecting...';
+      render(); // Show board immediately
       joinChannel();
-      channel.send({ type: 'broadcast', event: 'join', payload: {} });
     }
-    // ===== SHARE GAME =====
     function shareGame() {
       var url = window.location.origin + window.location.pathname + '?code=' + gameCode;
-      var text = `Play chess with me on Chessmate! 🎮\nCode: ${gameCode}\n${url}`;
-      var whatsapp = `https://wa.me/?text=${encodeURIComponent(text)}`;
+      var text = 'Play chess with me on Chessmate! 🎮\nCode: ' + gameCode + '\n' + url;
+      var whatsapp = 'https://wa.me/?text=' + encodeURIComponent(text);
       window.open(whatsapp, '_blank');
     }
 
-    // ===== REALTIME CHANNEL =====
     function joinChannel() {
-      channel = supabase.channel('chess-' + gameCode);
+      channel = supabase.channel('chess-' + gameCode, {
+        config: { broadcast: { self: false } }
+      });
       
-      channel.on('broadcast', { event: 'move' }, ({ payload }) => {
-        var move = game.move(payload);
+      channel.on('broadcast', { event: 'move' }, function(msg) {
+        console.log('Received move:', msg.payload);
+        var move = game.move(msg.payload);
         if (move) {
           render();
           updateStatus();
         }
       });
 
-      channel.on('broadcast', { event: 'join' }, () => {
+      channel.on('broadcast', { event: 'join' }, function() {
+        console.log('Opponent joined!');
         opponentJoined = true;
         if (isCreator) {
           showScreen('game-screen');
-          document.getElementById('connection-status').textContent = '✅ Opponent joined!';
+          render(); // Render board for creator
+          document.getElementById('connection-status').textContent = '✅ Opponent joined! You are White.';
+          updateStatus();
         }
       });
 
-      channel.on('broadcast', { event: 'reset' }, () => {
+      channel.on('broadcast', { event: 'reset' }, function() {
         game.reset();
         selected = null;
         render();
         updateStatus();
       });
 
-      channel.on('broadcast', { event: 'reset-request' }, () => {
+      channel.on('broadcast', { event: 'reset-request' }, function() {
         if (confirm('Opponent wants a new game. Accept?')) {
           channel.send({ type: 'broadcast', event: 'reset', payload: {} });
           game.reset();
@@ -239,12 +243,21 @@
           updateStatus();
         }
       });
-
-      channel.subscribe((status) => {
+      channel.subscribe(function(status) {
+        console.log('Channel status:', status);
         if (status === 'SUBSCRIBED') {
-          console.log('Connected to game:', gameCode);
-          if (!isCreator) {            document.getElementById('connection-status').textContent = '✅ Connected!';
+          document.getElementById('connection-status').textContent = isCreator 
+            ? '✅ Connected! Waiting for opponent...' 
+            : '✅ Connected! You are Black.';
+          
+          // If joining, send join event after a short delay
+          if (!isCreator) {
+            setTimeout(function() {
+              channel.send({ type: 'broadcast', event: 'join', payload: {} });
+            }, 500);
           }
+        } else if (status === 'CHANNEL_ERROR') {
+          document.getElementById('connection-status').textContent = '❌ Connection error. Refresh and try again.';
         }
       });
     }
@@ -264,7 +277,6 @@
       }
     }
 
-    // ===== BOARD RENDERING =====
     function sizeBoard() {
       var w = Math.min(window.innerWidth - 16, 560);
       var board = document.getElementById('board');
@@ -280,9 +292,7 @@
       var board = document.getElementById('board');
       board.innerHTML = '';
       var pos = game.board();
-      
-      // Flip board if playing black
-      var rowOrder = myColor === 'b' ? [7,6,5,4,3,2,1,0] : [0,1,2,3,4,5,6,7];
+            var rowOrder = myColor === 'b' ? [7,6,5,4,3,2,1,0] : [0,1,2,3,4,5,6,7];
       var colOrder = myColor === 'b' ? [7,6,5,4,3,2,1,0] : [0,1,2,3,4,5,6,7];
       
       for (var ri = 0; ri < 8; ri++) {
@@ -292,7 +302,8 @@
           var sq = document.createElement('div');
           var coord = 'abcdefgh'[c] + (8 - r);
           sq.className = 'sq ' + ((r + c) % 2 === 0 ? 'light' : 'dark');
-          sq.dataset.sq = coord;          var p = pos[r][c];
+          sq.dataset.sq = coord;
+          var p = pos[r][c];
           if (p) {
             var key = (p.color === 'w' ? 'w' : 'b') + p.type.toUpperCase();
             sq.textContent = PIECES[key];
@@ -311,16 +322,14 @@
     }
 
     function tap(sq) {
-      // Can't move if not your turn
       if (game.turn() !== myColor) return;
-      // Can't move until opponent joins (if creator)
       if (isCreator && !opponentJoined) return;
       
       if (selected === sq) { selected = null; render(); return; }
       if (selected) {
         var move = game.move({ from: selected, to: sq, promotion: 'q' });
         if (move !== null) {
-          // Broadcast move to opponent
+          console.log('Sending move:', move);
           channel.send({ type: 'broadcast', event: 'move', payload: { from: move.from, to: move.to, promotion: move.promotion || 'q' } });
           selected = null;
           render();
@@ -332,8 +341,7 @@
       if (piece && piece.color === game.turn() && piece.color === myColor) {
         selected = sq;
       } else {
-        selected = null;
-      }
+        selected = null;      }
       render();
     }
 
@@ -341,15 +349,14 @@
       var s = game.turn() === 'w' ? "White's turn" : "Black's turn";
       if (game.in_checkmate()) s = 'Checkmate! ' + (game.turn() === 'w' ? 'Black wins 🎉' : 'White wins 🎉');
       else if (game.in_draw()) s = 'Draw!';
-      else if (game.in_check()) s += ' — Check!';      
+      else if (game.in_check()) s += ' — Check!';
+      
       if (isCreator && !opponentJoined) s = 'Waiting for opponent...';
       document.getElementById('status').innerText = s;
     }
 
-    // ===== INIT =====
     window.addEventListener('resize', sizeBoard);
     
-    // Check URL for game code
     var urlParams = new URLSearchParams(window.location.search);
     var codeFromURL = urlParams.get('code');
     if (codeFromURL && codeFromURL.length === 6) {
