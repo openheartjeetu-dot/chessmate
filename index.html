@@ -95,10 +95,9 @@
     var selected = null;
     var myColor = 'w';
     var gameCode = null;
-    var channel = null;
-    var isCreator = false;    var opponentJoined = false;
-    var pingTimer = null;
-    var retryCount = 0;
+    var isCreator = false;
+    var opponentJoined = false;    var lastMoveId = 0;
+    var pollTimer = null;
 
     var PIECES = {
       'wK':'♔','wQ':'♕','wR':'♖','wB':'♗','wN':'♘','wP':'♙',
@@ -115,9 +114,8 @@
     }
 
     function goHome() {
-      if (pingTimer) clearInterval(pingTimer);
-      if (channel) channel.unsubscribe();
-      channel = null; gameCode = null; opponentJoined = false;
+      if (pollTimer) clearInterval(pollTimer);
+      gameCode = null; opponentJoined = false; lastMoveId = 0;
       showScreen('home-screen');
       debug('ready');
     }
@@ -132,7 +130,7 @@
       myColor = 'w';
       document.getElementById('game-code-display').textContent = gameCode;
       showScreen('lobby-screen');
-      connect();
+      startPolling();
     }
 
     function joinFromInput() {
@@ -143,15 +141,15 @@
       myColor = 'b';
       showScreen('game-screen');
       render();
-      connect();
+      startPolling();
     }
+
     function joinFromURL(code) {
-      gameCode = code;
-      isCreator = false;
+      gameCode = code;      isCreator = false;
       myColor = 'b';
       showScreen('game-screen');
       render();
-      connect();
+      startPolling();
     }
 
     function shareGame() {
@@ -160,90 +158,100 @@
       window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
     }
 
-    // ===== CONNECTION WITH AUTO-RETRY =====
-    function connect() {
-      debug('connecting to ' + gameCode + '...');
-      if (channel) channel.unsubscribe();
-      channel = sb.channel('chess-' + gameCode, { config: { broadcast: { self: false } } });
+    // ===== POLLING-BASED SYNC =====
+    function startPolling() {
+      debug('polling game ' + gameCode + '...');
+      if (pollTimer) clearInterval(pollTimer);
+      
+      // Check for new moves every 2 seconds
+      pollTimer = setInterval(function() {
+        checkForMoves();
+        checkForOpponent();
+      }, 2000);
+      
+      // Immediate first check
+      checkForMoves();
+      checkForOpponent();
+    }
 
-      channel.on('broadcast', { event: 'move' }, function(msg) {
-        var mv = game.move(msg.payload);
-        if (mv) { render(); updateStatus(); }
-      });
-
-      channel.on('broadcast', { event: 'ping' }, function() {
-        // Someone is in the lobby asking "anyone there?" — answer!
-        if (!isCreator && channel) {
-          channel.send({ type: 'broadcast', event: 'join', payload: {} });
-        }
-      });
-
-      channel.on('broadcast', { event: 'join' }, function() {
-        if (isCreator && !opponentJoined) {
-          opponentJoined = true;
-          if (pingTimer) clearInterval(pingTimer);
-          showScreen('game-screen');
-          render();
-          updateStatus();
-          debug('✅ opponent joined — you are WHITE');
-        }
-      });
-
-      channel.on('broadcast', { event: 'reset' }, function() {
-        game.reset(); selected = null; render(); updateStatus();
-      });
-
-      channel.on('broadcast', { event: 'reset-request' }, function() {
-        if (confirm('Opponent wants a new game. Accept?')) {          channel.send({ type: 'broadcast', event: 'reset', payload: {} });
-          game.reset(); selected = null; render(); updateStatus();
-        }
-      });
-
-      channel.subscribe(function(status) {
-        debug('status: ' + status + (retryCount ? ' (retry ' + retryCount + ')' : ''));
-        if (status === 'SUBSCRIBED') {
-          retryCount = 0;
-          if (isCreator) {
-            debug('✅ connected — waiting for opponent');
-            // Ask "anyone there?" every 2s until someone joins
-            pingTimer = setInterval(function() {
-              if (!opponentJoined && channel) {
-                channel.send({ type: 'broadcast', event: 'ping', payload: {} });
+    function checkForMoves() {
+      sb.from('moves')
+        .select('id, move_data')
+        .eq('game_code', gameCode)
+        .gt('id', lastMoveId)
+        .order('id', { ascending: true })
+        .then(function(result) {
+          if (result.data && result.data.length > 0) {
+            result.data.forEach(function(row) {
+              var mv = game.move(row.move_data);
+              if (mv) {
+                lastMoveId = row.id;
+                render();
+                updateStatus();
               }
-            }, 2000);
-          } else {
-            debug('✅ connected — you are BLACK');
-            channel.send({ type: 'broadcast', event: 'join', payload: {} });
+            });
           }
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          if (retryCount < 6) {
-            retryCount++;
-            debug('⚠️ ' + status + ' — retrying ' + retryCount + '/6...');
-            setTimeout(connect, 2000);
-          } else {
-            debug('❌ cannot connect — refresh page');
+        })
+        .catch(function(err) {
+          debug('poll error: ' + err.message);
+        });    }
+
+    function checkForOpponent() {
+      // Simple heuristic: if there are moves from both colors, opponent is here
+      sb.from('moves')
+        .select('move_data')
+        .eq('game_code', gameCode)
+        .limit(10)
+        .then(function(result) {
+          if (result.data && result.data.length > 0) {
+            var hasWhite = result.data.some(function(r){ return r.move_data.color === 'w'; });
+            var hasBlack = result.data.some(function(r){ return r.move_data.color === 'b'; });
+            if ((isCreator && hasBlack) || (!isCreator && hasWhite)) {
+              if (!opponentJoined) {
+                opponentJoined = true;
+                if (isCreator) {
+                  showScreen('game-screen');
+                  render();
+                  updateStatus();
+                  debug('✅ opponent joined — you are WHITE');
+                } else {
+                  debug('✅ connected — you are BLACK');
+                }
+              }
+            }
           }
-        }
-      });
+        });
+    }
+
+    function sendMove(moveData) {
+      sb.from('moves')
+        .insert({ game_code: gameCode, move_data: moveData })
+        .then(function(result) {
+          if (result.error) debug('send error: ' + result.error.message);
+        });
     }
 
     function leaveGame() { goHome(); }
 
     function requestReset() {
-      if (opponentJoined || !isCreator) {
-        channel.send({ type: 'broadcast', event: 'reset-request', payload: {} });
-      } else {
-        game.reset(); selected = null; render(); updateStatus();
+      if (confirm('Start a new game?')) {
+        // Insert a special "reset" move
+        sendMove({ type: 'reset' });
+        game.reset();
+        selected = null;
+        lastMoveId = 0;
+        render();
+        updateStatus();
       }
     }
-
     function sizeBoard() {
       var w = Math.min(window.innerWidth - 16, 560);
       var board = document.getElementById('board');
       board.style.width = w + 'px';
       var sqSize = w / 8;
       var cells = document.querySelectorAll('.sq');
-      for (var i = 0; i < cells.length; i++) {        cells[i].style.fontSize = (sqSize * 0.82) + 'px';
+      for (var i = 0; i < cells.length; i++) {
+        cells[i].style.fontSize = (sqSize * 0.82) + 'px';
       }
     }
 
@@ -284,15 +292,18 @@
       if (selected) {
         var move = game.move({ from: selected, to: sq, promotion: 'q' });
         if (move !== null) {
-          channel.send({ type: 'broadcast', event: 'move', payload: { from: move.from, to: move.to, promotion: 'q' } });
-          selected = null; render(); updateStatus();
+          // Send move to database          sendMove({ from: move.from, to: move.to, promotion: 'q', color: move.color });
+          selected = null;
+          render();
+          updateStatus();
           return;
         }
       }
       var piece = game.get(sq);
       if (piece && piece.color === game.turn() && piece.color === myColor) selected = sq;
       else selected = null;
-      render();    }
+      render();
+    }
 
     function updateStatus() {
       var s = game.turn() === 'w' ? "White's turn" : "Black's turn";
