@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ChessMaster — Think. Plan. Win.</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<style>
+:root{--bg:#060a08;--card:#0d120e;--card2:#131a15;--border:#1e2a20;--green:#a3e635;--green2:#84cc16;--gdark:#3f6212;--gold:#fbbf24;--red:#ef4444;--text:#e8ede8;--muted:#8fa096}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif;min-height:100vh;overflow-x:hidden}
+.screen{display:none;flex-direction:column;min-height:100vh;padding:14px;padding-bottom:86px}
+.screen.active{display:flex}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.logo{font-size:22px;font-weight:800}
+.logo b{color:var(--green)}
+.tagline{font-size:11px;color:var(--muted)}
+.chips{display:flex;gap:8px}
+.chip{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:8px 12px;font-size:12px;display:flex;align-items:center;gap:6px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px;margin:10px 0}
+.sec{color:var(--green);font-size:13px;font-weight:700;margin:12px 0 8px}
+.muted{color:var(--muted);font-size:12px}
+.grid{display:grid;gap:10px}
+.g2{grid-template-columns:1fr 1fr}
+.mode{background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center;cursor:pointer}
+.mode .ico{font-size:32px;display:block;margin-bottom:6px}
+.mode h4{font-size:14px;margin-bottom:4px}
+.btn{border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;width:100%;margin:6px 0;color:var(--text)}
+.btn-grad{background:linear-gradient(135deg,#3f6212,#84cc16);color:#fff;box-shadow:0 4px 18px rgba(132,204,22,.25)}
+.btn-dark{background:var(--card2);border:1px solid var(--border)}
+.btn-gold{background:linear-gradient(135deg,#713f12,#a16207);color:#fde68a}
+.btn-red{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.btn-sm{width:auto;padding:10px 18px;font-size:13px;margin:0}
+.field{display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:13px;margin:8px 0}
+.field input{background:none;border:none;color:var(--text);flex:1;font-size:15px;outline:none}
+.tabs{display:flex;gap:6px;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:4px;margin:10px 0}
+.tab{flex:1;padding:11px;text-align:center;color:var(--muted);font-weight:600;border-radius:10px;cursor:pointer}
+.tab.on{color:var(--green);border:1px solid var(--green);background:rgba(163,230,53,.08)}
+.king-box{width:110px;height:110px;margin:10px auto;border:1px solid var(--green);border-radius:24px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 30px rgba(132,204,22,.35)}
+.king-box span{font-size:60px;color:var(--green2);text-shadow:0 0 20px rgba(132,204,22,.8)}
+.avatar-ring{display:inline-block;border:2px solid var(--green);border-radius:50%;padding:3px;box-shadow:0 0 14px rgba(163,230,53,.4)}
+.avatar{width:64px;height:64px;border-radius:50%;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:34px}
+.tag-gold{color:var(--gold);background:rgba(251,191,36,.12);padding:4px 10px;border-radius:10px;font-size:12px;display:inline-block}
+.bar{height:6px;background:#233026;border-radius:3px;overflow:hidden;margin:6px 0}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#4d7c0f,#a3e635)}
+.row{display:flex;align-items:center;gap:12px;padding:12px;background:var(--card2);border:1px solid var(--border);border-radius:12px;margin:8px 0;cursor:pointer}
+.ibox{width:40px;height:40px;min-width:40px;background:#1a231c;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.row h5{font-size:14px}
+.row p{font-size:11px;color:var(--muted)}
+.toggle{width:48px;height:26px;background:#2a352c;border-radius:13px;position:relative;cursor:pointer;margin-left:auto;transition:.2s}.toggle.on{background:linear-gradient(90deg,#4d7c0f,#84cc16)}
+.toggle::after{content:'';position:absolute;width:22px;height:22px;background:#fff;border-radius:50%;top:2px;left:2px;transition:.2s}
+.toggle.on::after{left:24px}
+#board{display:grid;grid-template-columns:repeat(8,1fr);grid-auto-rows:1fr;border:3px solid #2a352c;border-radius:8px;overflow:hidden;margin:6px auto}
+.sq{aspect-ratio:1/1;width:100%;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;line-height:1}
+.gl{background:#eeeed2}.gd{background:#769656}
+.sel{box-shadow:inset 0 0 0 4px #f7ec59}
+.hint::after{content:'';position:absolute;width:28%;height:28%;background:rgba(0,0,0,.3);border-radius:50%}
+.piece-w{color:#fff;text-shadow:0 0 2px #000,0 1px 2px #000}
+.piece-b{color:#1a1a1a;text-shadow:0 1px 1px rgba(255,255,255,.25)}
+.clock{font-family:monospace;font-size:17px;background:var(--card2);border:1px solid var(--border);padding:6px 14px;border-radius:8px}
+.clock.on{background:var(--green);color:#0a1a05;font-weight:700;border-color:var(--green)}
+.cap-strip{min-height:22px;font-size:15px;letter-spacing:2px;margin:2px 4px;color:#cfd8cf}
+.chat-box{background:#0b141a;border:1px solid var(--border);border-radius:14px;padding:12px;margin-top:8px;max-height:220px;overflow-y:auto}
+.msg{padding:8px 12px;margin:4px 0;border-radius:12px;background:#202c33;font-size:14px;max-width:80%;display:flex;flex-direction:column}
+.msg .time{font-size:10px;opacity:.6;margin-top:2px;align-self:flex-end}
+.msg.me{background:#005c4b;margin-left:auto;border-bottom-right-radius:4px}
+.msg.other{border-bottom-left-radius:4px}
+.nav{position:fixed;bottom:0;left:0;right:0;background:#0a0f0c;border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:10px 0}
+.nav-item{display:flex;flex-direction:column;align-items:center;font-size:10px;color:var(--muted);cursor:pointer}
+.nav-item .ni{font-size:22px;margin-bottom:3px}
+.nav-item.active{color:var(--green)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.78);display:none;align-items:center;justify-content:center;z-index:100}
+.modal.open{display:flex}
+.modal-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:24px;width:86%;max-width:340px;text-align:center}
+.avatar-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:8px 0}
+.avatar-opt{font-size:26px;text-align:center;padding:8px;background:var(--card2);border-radius:10px;cursor:pointer}
+.avatar-opt.picked{background:var(--gdark);border:1px solid var(--green)}
+.status-dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:6px}
+.online{background:#4ade80}.offline{background:#555}
+.result-win{color:#4ade80;font-weight:700}.result-loss{color:#ef4444;font-weight:700}.result-draw{color:#fbbf24;font-weight:700}
+.code-display{background:var(--card2);border:1px solid var(--green);padding:16px;border-radius:12px;font-size:30px;letter-spacing:6px;text-align:center;margin:12px 0;font-weight:800;color:var(--green);box-shadow:0 0 20px rgba(163,230,53,.15)}
+</style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="auth-screen" class="screen active">
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
+    <div class="king-box"><span>♚</span></div>
+    <h1 style="text-align:center;font-size:30px;margin-top:8px">Welcome <b style="color:var(--green)">Back!</b></h1>
+    <p class="muted" style="text-align:center;margin-bottom:6px">Login to continue your chess journey</p>
+    <div class="tabs">
+      <div class="tab on" id="tab-login" onclick="switchTab('login')">→ Log In</div>
+      <div class="tab" id="tab-signup" onclick="switchTab('signup')">＋ Sign Up</div>
+    </div>
+    <div id="login-form">
+      <div class="field">👤<input type="email" id="auth-email" placeholder="Email or Username"></div>
+      <div class="field">🔒<input type="password" id="auth-password" placeholder="Password"></div>
+      <button class="btn btn-grad" onclick="login()">Log In →</button>      <p class="muted" style="text-align:center;margin:10px 0">or login with</p>
+      <div class="grid g2">
+        <button class="btn btn-dark" onclick="googleLogin()">🔵 Google</button>
+        <button class="btn btn-dark" onclick="guestLogin()">🎮 Guest</button>
+      </div>
+      <div class="card" style="display:flex;gap:10px;align-items:center;margin-top:14px">
+        <div class="ibox" style="background:rgba(163,230,53,.15)">🛡️</div>
+        <div><h5>Secure & Fair Play</h5><p class="muted">We ensure a safe and fair gaming experience.</p></div>
+      </div>
+    </div>
+    <div id="signup-form" style="display:none">
+      <div class="field">👤<input type="text" id="signup-name" placeholder="Full Name"></div>
+      <div class="field">✉️<input type="email" id="signup-email" placeholder="Email Address"></div>
+      <div class="field">@<input type="text" id="signup-username" placeholder="Username (your unique ID)"></div>
+      <div class="field">🔒<input type="password" id="signup-password" placeholder="Password (min 8 chars)"></div>
+      <button class="btn btn-grad" onclick="signup()">Create Account →</button>
+      <p class="muted" style="text-align:center;margin:10px 0">or sign up with</p>
+      <div class="grid g2">
+        <button class="btn btn-dark" onclick="googleLogin()">🔵 Google</button>
+        <button class="btn btn-dark" onclick="guestLogin()">🎮 Guest</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HOME -->
+<div id="home-screen" class="screen">
+  <div class="topbar">
+    <div><div class="logo">♞ Chess<b>Master</b></div><div class="tagline">Think. Plan. Win. ●</div></div>
+    <div class="chips">
+      <div class="chip">🔥 <span id="h-streak">0</span></div>
+      <div class="chip">👑 <span id="h-rank">Bronze</span></div>
+      <div class="chip" onclick="showNotifications()">🔔</div>
+      <div class="chip" onclick="showSettings()">⚙️</div>
+    </div>
+  </div>
+  <div class="card" onclick="showProfile()" style="display:flex;gap:12px;align-items:center">
+    <div class="avatar-ring"><div class="avatar" id="h-avatar">♟</div></div>
+    <div style="flex:1">
+      <h3 id="h-name">Player</h3>
+      <div class="tag-gold" id="h-title">Chess Explorer</div>
+      <div style="margin-top:6px">🏆 <b id="h-rating">1200</b> <span class="muted">Rating</span></div>
+    </div>
+  </div>
+  <div class="card" style="background:linear-gradient(120deg,#0d1a0d,#13240f);border-color:#2a4a1e">
+    <div class="sec">SEASON 12</div>
+    <h3>Play. Improve. Become a <b style="color:var(--green)">Chess Master!</b></h3>
+  </div>
+  <div class="sec">⚡ Play Now</div>
+  <div class="grid g2">    <div class="mode" onclick="quickPlay()"><span class="ico">🌐</span><h4>Play Online</h4><p class="muted">Real players</p></div>
+    <div class="mode" onclick="playBot()"><span class="ico">🤖</span><h4>Play with AI</h4><p class="muted">Greedy bot</p></div>
+    <div class="mode" onclick="createGame()"><span class="ico">⏱️</span><h4>Live Play</h4><p class="muted">10 min timed</p></div>
+    <div class="mode" onclick="showJoinGame()"><span class="ico">🟧</span><h4>Custom Game</h4><p class="muted">Join by code</p></div>
+  </div>
+  <div class="sec">🟢 Online Players</div>
+  <div id="online-players"></div>
+  <div class="card" style="background:linear-gradient(120deg,#1a1407,#241c0a);border-color:#4a3a12;display:flex;align-items:center;gap:12px">
+    <div style="font-size:30px">👑</div>
+    <div style="flex:1"><h4 style="color:var(--gold)">Go Premium</h4><p class="muted">Unlimited puzzles, no ads</p></div>
+    <button class="btn btn-gold btn-sm" onclick="alert('Premium coming soon!')">Upgrade</button>
+  </div>
+</div>
+
+<!-- LOBBY -->
+<div id="lobby-screen" class="screen">
+  <div class="topbar"><div class="logo">Game Lobby</div></div>
+  <p class="muted" style="text-align:center">Share this code with your opponent:</p>
+  <div class="code-display" id="game-code"></div>
+  <button class="btn btn-grad" onclick="shareGame()">📤 Share via WhatsApp</button>
+  <p id="lobby-status" class="muted" style="text-align:center;margin:16px 0">Waiting for opponent...</p>
+  <button class="btn btn-dark" onclick="goHome()">← Back</button>
+</div>
+
+<!-- GAME -->
+<div id="game-screen" class="screen">
+  <div class="topbar">
+    <div id="opponent-info" onclick="openOpponentProfile()" style="cursor:pointer">👤 <span id="opp-name">Opponent</span></div>
+    <div class="clock" id="clock-top">10:00</div>
+  </div>
+  <div class="cap-strip" id="cap-top"></div>
+  <div id="board"></div>
+  <div class="cap-strip" id="cap-bottom"></div>
+  <div class="topbar">
+    <div class="clock on" id="clock-bottom">10:00</div>
+    <div id="game-status" class="muted">White's turn</div>
+  </div>
+  <div class="grid g2" style="margin-top:8px">
+    <button class="btn btn-dark" onclick="resignGame()">🏳️ Resign</button>
+    <button class="btn btn-dark" onclick="offerDraw()">🤝 Draw</button>
+  </div>
+  <div class="chat-box" id="game-chat"></div>
+  <div style="display:flex;gap:8px;margin-top:8px">
+    <div class="field" style="flex:1;margin:0"><input type="text" id="chat-input" placeholder="Type a message..."></div>
+    <button class="btn btn-grad btn-sm" onclick="sendChat()">➤</button>
+  </div>
+</div>
+<!-- PLAY -->
+<div id="play-screen" class="screen">
+  <div class="topbar"><div class="logo">⚔️ Play</div></div>
+  <div class="grid g2">
+    <div class="mode" onclick="quickPlay()"><span class="ico">🌐</span><h4>Play Online</h4><p class="muted">Real players</p></div>
+    <div class="mode" onclick="playBot()"><span class="ico">🤖</span><h4>Play with AI</h4><p class="muted">Greedy bot</p></div>
+    <div class="mode" onclick="createGame()"><span class="ico">⏱️</span><h4>Live Play</h4><p class="muted">10 min timed</p></div>
+    <div class="mode" onclick="showHistory()"><span class="ico">📜</span><h4>History</h4><p class="muted">Past games</p></div>
+  </div>
+  <div class="sec">🔑 Join with code</div>
+  <div class="field">🎮<input id="join-code-input" maxlength="6" placeholder="ABC123" style="letter-spacing:4px;text-transform:uppercase"><button class="btn btn-grad btn-sm" onclick="joinFromInput()">Join</button></div>
+</div>
+
+<!-- FRIENDS -->
+<div id="friends-screen" class="screen">
+  <div class="topbar"><div class="logo">👥 Friends</div></div>
+  <p class="muted">Connect, challenge and grow together</p>
+  <div class="card grid" style="grid-template-columns:repeat(4,1fr);text-align:center">
+    <div><div class="stat-value" id="f-total" style="font-size:20px;color:var(--green)">0</div><div class="muted">Friends</div></div>
+    <div><div class="stat-value" id="f-online" style="font-size:20px;color:var(--green)">0</div><div class="muted">Online</div></div>
+    <div><div class="stat-value" style="font-size:20px;color:#a78bfa">0</div><div class="muted">Playing</div></div>
+    <div><div class="stat-value" style="font-size:20px;color:var(--gold)">0</div><div class="muted">Challenges</div></div>
+  </div>
+  <div class="field">🔍<input id="friend-search" placeholder="Search username..."><button class="btn btn-grad btn-sm" onclick="addFriend()">Add</button></div>
+  <div id="friend-requests"></div>
+  <div class="sec">🟢 Online Friends</div><div id="friends-online"></div>
+  <div class="sec">😴 Offline</div><div id="friends-offline"></div>
+</div>
+
+<!-- CHAT LIST -->
+<div id="chat-screen" class="screen">
+  <div class="topbar"><div class="logo">💬 Messages</div></div>
+  <div class="field">🔍<input placeholder="Search chats"></div>
+  <div id="chat-list"></div>
+</div>
+
+<!-- CHAT DETAIL -->
+<div id="chat-detail-screen" class="screen">
+  <div class="topbar">
+    <div class="chip" onclick="showChats()">←</div>
+    <div id="chat-partner" style="font-weight:700">Friend</div>
+    <div class="chip" onclick="challengeChatPartner()">⚔️</div>
+  </div>
+  <div class="chat-box" id="dm-chat" style="flex:1;max-height:none"></div>
+  <div style="display:flex;gap:8px;margin-top:8px">
+    <div class="field" style="flex:1;margin:0"><input id="dm-input" placeholder="Message..."></div>
+    <button class="btn btn-grad btn-sm" onclick="sendDM()">➤</button>
+  </div>
+</div>
+<!-- PROFILE -->
+<div id="profile-screen" class="screen">
+  <div class="topbar"><div class="logo">👤 Profile</div><div class="chip" onclick="showSettings()">⚙️</div></div>
+  <div class="card" style="display:flex;gap:14px;align-items:center">
+    <div class="avatar-ring"><div class="avatar" id="profile-avatar" style="width:78px;height:78px;font-size:42px">♟</div></div>
+    <div><h2 id="profile-username">Player</h2><div class="tag-gold">♛ Chess Explorer</div><div style="margin-top:6px">🏆 <b id="profile-rating">1200</b></div><p class="muted" id="profile-email"></p></div>
+  </div>
+  <div class="card"><div style="display:flex;justify-content:space-between"><b id="level-label">Level 1</b><span class="muted" id="xp-label">0/100 XP</span></div><div class="bar"><i id="xp-bar" style="width:4%"></i></div></div>
+  <div class="grid" style="grid-template-columns:repeat(4,1fr);text-align:center">
+    <div class="card"><div class="stat-value" style="font-size:20px;color:var(--green)" id="p-rating">1200</div><div class="muted">Rating</div></div>
+    <div class="card"><div class="stat-value" style="font-size:20px;color:var(--green)" id="p-games">0</div><div class="muted">Games</div></div>
+    <div class="card"><div class="stat-value" style="font-size:20px;color:var(--green)" id="p-winrate">0%</div><div class="muted">Win Rate</div></div>
+    <div class="card"><div class="stat-value" style="font-size:20px;color:var(--gold)" id="p-streak">0</div><div class="muted">Streak</div></div>
+  </div>
+  <div class="sec">🏆 Achievements</div>
+  <div class="grid" style="grid-template-columns:repeat(4,1fr);text-align:center">
+    <div class="mode"><span class="ico">🥇</span><p class="muted">First Win</p></div>
+    <div class="mode"><span class="ico">🔥</span><p class="muted">Streak 5</p></div>
+    <div class="mode"><span class="ico">🧠</span><p class="muted">Puzzler</p></div>
+    <div class="mode"><span class="ico">⭐</span><p class="muted">Veteran</p></div>
+  </div>
+  <div class="sec">⚡ Recent Activity</div>
+  <div id="history-list"></div>
+  <div class="sec">More Options</div>
+  <div class="row" onclick="toggleEdit()"><div class="ibox">✏️</div><div><h5>Edit Profile</h5><p class="muted">Name, avatar</p></div></div>
+  <div class="row" onclick="showHistory()"><div class="ibox">📜</div><div><h5>Game History</h5><p class="muted">All your games</p></div></div>
+  <div class="row" onclick="shareApp()"><div class="ibox">🔗</div><div><h5>Share App</h5><p class="muted">Invite friends</p></div></div>
+  <div id="edit-panel" class="card" style="display:none">
+    <h4>✏️ Edit Profile</h4>
+    <div class="field">👤<input id="edit-username" placeholder="New username"></div>
+    <p class="muted">Pick your avatar:</p>
+    <div class="avatar-grid" id="avatar-grid"></div>
+    <button class="btn btn-grad" onclick="saveProfile()">💾 Save Changes</button>
+  </div>
+  <button class="btn btn-red" onclick="logout()">⎋ Logout</button>
+</div>
+
+<!-- SETTINGS -->
+<div id="settings-screen" class="screen">
+  <div class="topbar"><div class="chip" onclick="showProfile()">←</div><div class="logo">⚙️ Settings</div><div></div></div>
+  <div class="sec">Account</div>
+  <div class="row" onclick="toggleEdit();showProfile()"><div class="ibox">👤</div><div><h5>Edit Profile</h5><p class="muted">Name, avatar</p></div></div>
+  <div class="row"><div class="ibox">@</div><div><h5>Username</h5><p class="muted" id="set-username">—</p></div></div>
+  <div class="row"><div class="ibox">✉️</div><div><h5>Email</h5><p class="muted" id="set-email">—</p></div></div>
+  <div class="sec">Preferences</div>
+  <div class="row"><div class="ibox">🔊</div><div><h5>Sound Effects</h5><p class="muted">Move & capture sounds</p></div><div class="toggle on" id="snd-toggle" onclick="toggleSound(this)"></div></div>
+  <div class="row"><div class="ibox">💡</div><div><h5>Show Legal Moves</h5><p class="muted">Highlight dots</p></div><div class="toggle on" onclick="this.classList.toggle('on');showLegal=this.classList.contains('on')"></div></div>
+  <div class="sec">Board & Pieces</div>
+  <div class="row" onclick="toggleBoardTheme()"><div class="ibox">🟩</div><div><h5>Board Theme</h5><p class="muted" id="theme-label">Green Classic</p></div></div>
+  <div class="sec">More</div>  <div class="row" onclick="shareApp()"><div class="ibox">🔗</div><div><h5>Share App</h5></div></div>
+  <div class="row" onclick="alert('ChessMaster v1.0 — built with ❤️')"><div class="ibox">ℹ️</div><div><h5>About</h5></div></div>
+  <button class="btn btn-red" onclick="logout()">⎋ Logout</button>
+</div>
+
+<!-- MORE -->
+<div id="more-screen" class="screen">
+  <div class="topbar"><div class="logo">••• More</div><div class="chips"><div class="chip" onclick="alert('Premium coming soon!')">👑</div><div class="chip" onclick="showNotifications()">🔔</div></div></div>
+  <div class="card" style="display:flex;gap:12px;align-items:center" onclick="showProfile()">
+    <div class="avatar-ring"><div class="avatar" id="m-avatar">♟</div></div>
+    <div style="flex:1"><h3 id="m-name">Player</h3><div class="tag-gold">♛ Chess Explorer</div></div>
+  </div>
+  <div class="card" style="background:linear-gradient(120deg,#1a1407,#241c0a);border-color:#4a3a12;display:flex;align-items:center;gap:12px">
+    <div style="font-size:30px">👑</div>
+    <div style="flex:1"><h4 style="color:var(--gold)">Upgrade to Premium</h4><p class="muted">Unlock everything</p></div>
+    <button class="btn btn-gold btn-sm" onclick="alert('Coming soon!')">Go Premium</button>
+  </div>
+  <div class="sec">Explore</div>
+  <div class="grid g2">
+    <div class="mode" onclick="alert('Tournaments coming soon!')"><span class="ico">🏆</span><h4>Tournaments</h4></div>
+    <div class="mode" onclick="showLeaderboard()"><span class="ico">📊</span><h4>Leaderboard</h4></div>
+    <div class="mode" onclick="showHistory()"><span class="ico">📈</span><h4>Stats & Reports</h4></div>
+    <div class="mode" onclick="alert('Game Review coming soon!')"><span class="ico">🔍</span><h4>Game Review</h4></div>
+    <div class="mode" onclick="alert('News coming soon!')"><span class="ico">📰</span><h4>News</h4></div>
+    <div class="mode" onclick="alert('Learn coming soon!')"><span class="ico">🎓</span><h4>Learn</h4></div>
+  </div>
+  <div class="sec">Tools</div>
+  <div class="grid g2">
+    <div class="mode" onclick="alert('Board Editor coming soon!')"><span class="ico">📝</span><h4>Board Editor</h4></div>
+    <div class="mode" onclick="alert('Engine Analysis coming soon!')"><span class="ico">🤖</span><h4>Engine Analysis</h4></div>
+    <div class="mode" onclick="showPuzzles()"><span class="ico">⚡</span><h4>Puzzle Rush</h4></div>
+    <div class="mode" onclick="showSettings()"><span class="ico">🎨</span><h4>Themes</h4></div>
+  </div>
+</div>
+
+<!-- PUZZLES -->
+<div id="puzzles-screen" class="screen">
+  <div class="topbar"><div class="chip" onclick="goHome()">←</div><div class="logo">🧩 Puzzles</div><div></div></div>
+  <div class="grid g2">
+    <div class="card"><div class="sec">📅 Daily Puzzle</div><p class="muted">🔥 Streak: <span id="pz-streak">0</span> days</p><button class="btn btn-grad" onclick="startPuzzle()">Solve Daily Puzzle</button></div>
+    <div class="card" style="border-color:#4c1d95"><div class="sec" style="color:#a78bfa">📈 Puzzle Rating</div><h2 style="color:#a78bfa">1620</h2><div class="bar"><i style="width:62%;background:#7c3aed"></i></div></div>
+  </div>
+  <div class="tabs">
+    <div class="tab on">All</div><div class="tab" onclick="startPuzzle()">Mate in 1</div><div class="tab" onclick="alert('More puzzles coming soon!')">Tactics</div><div class="tab" onclick="alert('More puzzles coming soon!')">Endgame</div>
+  </div>
+  <div id="puzzle-wrap"></div>
+  <div class="sec">Your Progress</div>
+  <div class="card grid" style="grid-template-columns:repeat(4,1fr);text-align:center">
+    <div><div class="stat-value" style="font-size:18px;color:#a78bfa" id="pz-solved">0</div><div class="muted">Solved</div></div>
+    <div><div class="stat-value" style="font-size:18px;color:#a78bfa">1620</div><div class="muted">Best</div></div>    <div><div class="stat-value" style="font-size:18px;color:#a78bfa">—</div><div class="muted">Avg Time</div></div>
+    <div><div class="stat-value" style="font-size:18px;color:#a78bfa">—</div><div class="muted">Accuracy</div></div>
+  </div>
+</div>
+
+<!-- LEADERBOARD -->
+<div id="lb-screen" class="screen">
+  <div class="topbar"><div class="chip" onclick="goHome()">←</div><div class="logo">🏆 Leaderboard</div><div></div></div>
+  <div class="tabs"><div class="tab on">🌐 Global</div><div class="tab" onclick="alert('Friends leaderboard coming soon!')">Friends</div><div class="tab" onclick="alert('Country leaderboard coming soon!')">Country</div></div>
+  <div class="card" style="text-align:center">
+    <div style="display:flex;justify-content:space-around;align-items:flex-end">
+      <div><div style="font-size:30px">🥈</div><div class="muted">KnightRider</div><b style="color:var(--green)">2387</b></div>
+      <div><div style="font-size:40px">🥇</div><div>MagnusMax ✅</div><b style="color:var(--green)">2450</b></div>
+      <div><div style="font-size:30px">🥉</div><div class="muted">ChessQueen</div><b style="color:var(--green)">2310</b></div>
+    </div>
+  </div>
+  <div id="lb-list"></div>
+  <div class="card" style="border-color:var(--green);display:flex;align-items:center;gap:10px">
+    <div><div class="muted">Your Rank</div><b style="font-size:20px" id="lb-your-rank">—</b></div>
+    <div style="flex:1"><h4 id="lb-your-name">You</h4><p class="muted">Keep improving!</p></div>
+    <b style="color:var(--green)" id="lb-your-rating">1200</b>
+  </div>
+</div>
+
+<!-- NOTIFICATIONS -->
+<div id="notif-screen" class="screen">
+  <div class="topbar"><div class="chip" onclick="goHome()">←</div><div class="logo">🔔 Notifications</div><div class="chip" style="color:var(--green)">✓ read</div></div>
+  <div id="notif-list"></div>
+</div>
+
+<!-- HISTORY -->
+<div id="history-screen" class="screen">
+  <div class="topbar"><div class="chip" onclick="goHome()">←</div><div class="logo">📜 Game History</div><div></div></div>
+  <div id="history-full"></div>
+</div>
+
+<!-- OPPONENT MODAL -->
+<div class="modal" id="opp-modal">
+  <div class="modal-card">
+    <div class="avatar-ring"><div class="avatar" id="modal-avatar" style="width:78px;height:78px;font-size:42px;margin:0 auto">♟</div></div>
+    <h2 id="modal-name" style="margin-top:8px">Opponent</h2>
+    <p class="muted" id="modal-rating">Rating 1200</p>
+    <div class="grid" style="grid-template-columns:repeat(3,1fr);text-align:center;margin:10px 0">
+      <div><div class="stat-value" style="font-size:18px;color:var(--green)" id="modal-w">0</div><div class="muted">Wins</div></div>
+      <div><div class="stat-value" style="font-size:18px;color:var(--red)" id="modal-l">0</div><div class="muted">Losses</div></div>
+      <div><div class="stat-value" style="font-size:18px;color:var(--gold)" id="modal-r">1200</div><div class="muted">Rating</div></div>
+    </div>
+    <button class="btn btn-grad" onclick="addOpponentFriend()">➕ Send Friend Request</button>
+    <button class="btn btn-dark" onclick="closeModal()">Close</button>
+  </div></div>
+
+<!-- NAV -->
+<div class="nav" id="main-nav" style="display:none">
+  <div class="nav-item active" onclick="showScreen('home-screen')"><div class="ni">🏠</div>Home</div>
+  <div class="nav-item" onclick="showScreen('play-screen')"><div class="ni">⚔️</div>Play</div>
+  <div class="nav-item" onclick="showScreen('puzzles-screen')"><div class="ni">🧩</div>Puzzles</div>
+  <div class="nav-item" onclick="showScreen('friends-screen')"><div class="ni">👥</div>Friends</div>
+  <div class="nav-item" onclick="showScreen('more-screen')"><div class="ni">•••</div>More</div>
+</div>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig={apiKey:"AIzaSyD4N6COg8v60wsVuK2NDVp-vJsQM9D0GjU",authDomain:"chessmate-3340a.firebaseapp.com",databaseURL:"https://chessmate-3340a-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"chessmate-3340a",storageBucket:"chessmate-3340a.firebasestorage.app",messagingSenderId:"79088859221",appId:"1:79088859221:web:3b361b77678375fca4bcdc"};
+firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth(),db=firebase.database();
+let currentUser=null,userData=null,currentGame=null,oppUid=null,oppName='Opponent';
+let game=new Chess(),selected=null,myColor='w',pollTimer=null,lastMoveId=0,chatLoaded=false,gameRecorded=false;
+let vsBot=false,vsLocal=false,showLegal=true,soundOn=true,pickedAvatar=null;
+let timeW=600,timeB=600,clockTimer=null,selectedMinutes=10;
+const AVATARS=['♟','😀','😎','','🤠','','🦁','','🦊','','👻','','⭐','💎','🎯','👑','🌙','⚡'];
+const PIECES={'wK':'♔','wQ':'♕','wR':'♖','wB':'♗','wN':'♘','wP':'♙','bK':'♚','bQ':'♛','bR':'♜','bB':'♝','bN':'♞','bP':'♟'};
+const VAL={p:1,n:3,b:3,r:5,q:9};
+
+function switchTab(t){
+  document.getElementById('tab-login').classList.toggle('on',t==='login');
+  document.getElementById('tab-signup').classList.toggle('on',t==='signup');
+  document.getElementById('login-form').style.display=t==='login'?'block':'none';
+  document.getElementById('signup-form').style.display=t==='signup'?'block':'none';
+}
+function login(){auth.signInWithEmailAndPassword(document.getElementById('auth-email').value,document.getElementById('auth-password').value).catch(e=>alert(e.message));}
+function signup(){
+  const e=document.getElementById('signup-email').value,p=document.getElementById('signup-password').value,u=document.getElementById('signup-username').value,n=document.getElementById('signup-name').value;
+  if(p.length<8){alert('Password must be 8+ characters');return;}
+  auth.createUserWithEmailAndPassword(e,p).then(c=>{
+    db.ref('users/'+c.user.uid).set({username:u||n||('Player'+Math.floor(Math.random()*1000)),name:n||u,email:e,rating:1200,wins:0,losses:0,draws:0,streak:0,avatar:'♟',createdAt:Date.now(),lastOnline:Date.now()});
+  }).catch(e=>alert(e.message));
+}
+function googleLogin(){auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e=>alert('Google failed: '+e.message));}
+function guestLogin(){auth.signInAnonymously().catch(e=>alert(e.message));}
+function logout(){auth.signOut();}
+auth.onAuthStateChanged(user=>{
+  if(user){currentUser=user;db.ref('users/'+user.uid+'/lastOnline').set(Date.now());loadUserData();document.getElementById('main-nav').style.display='flex';showScreen('home-screen');}
+  else{currentUser=null;userData=null;document.getElementById('main-nav').style.display='none';showScreen('auth-screen');}
+});
+function loadUserData(){
+  db.ref('users/'+currentUser.uid).on('value',snap=>{
+    userData=snap.val();
+    if(!userData){db.ref('users/'+currentUser.uid).set({username:currentUser.displayName||('Guest'+Math.floor(Math.random()*1000)),email:currentUser.email||'guest@chessmaster.app',rating:1200,wins:0,losses:0,draws:0,streak:0,avatar:'♟',createdAt:Date.now(),lastOnline:Date.now()});}
+    else updateUI();
+  });
+}
+function rankTitle(r){return r>=2200?'Master':r>=1800?'Gold':r>=1400?'Silver':'Bronze';}
+function updateUI(){
+  if(!userData)return;
+  const t=(userData.wins||0)+(userData.losses||0)+(userData.draws||0);
+  const wr=t>0?Math.round(userData.wins/t*100)+'%':'0%';
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  set('h-name',userData.username);set('h-avatar',userData.avatar);set('h-rating',userData.rating);set('h-streak',userData.streak||0);set('h-rank',rankTitle(userData.rating));  set('profile-username',userData.username);set('profile-avatar',userData.avatar);set('profile-rating',userData.rating);set('profile-email',userData.email||'');
+  set('p-rating',userData.rating);set('p-games',t);set('p-winrate',wr);set('p-streak',userData.streak||0);
+  set('set-username',userData.username);set('set-email',userData.email||'—');
+  set('m-name',userData.username);set('m-avatar',userData.avatar);
+  const lvl=Math.floor(t/10)+1;set('level-label','Level '+lvl);set('xp-label',(t%10)*10+'/100 XP');
+  const xb=document.getElementById('xp-bar');if(xb)xb.style.width=Math.max(4,(t%10)*10)+'%';
+}
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const m={'home-screen':0,'play-screen':1,'puzzles-screen':2,'friends-screen':3,'more-screen':4};
+  if(m[id]!==undefined)document.querySelectorAll('.nav-item')[m[id]].classList.add('active');
+  if(id==='friends-screen')loadFriends();
+  if(id==='chat-screen')loadChats();
+  if(id==='history-screen')loadHistory();
+  if(id==='lb-screen')renderLeaderboard();
+  if(id==='notif-screen')renderNotifications();
+  if(id==='home-screen')loadOnlinePlayers();
+}
+function goHome(){if(pollTimer)clearInterval(pollTimer);if(clockTimer)clearInterval(clockTimer);currentGame=null;showScreen('home-screen');}
+function showProfile(){showScreen('profile-screen');}
+function showSettings(){showScreen('settings-screen');}
+function showChats(){showScreen('chat-screen');}
+function showPuzzles(){showScreen('puzzles-screen');}
+function showHistory(){showScreen('history-screen');}
+function showLeaderboard(){showScreen('lb-screen');}
+function showNotifications(){showScreen('notif-screen');}
+function shareApp(){window.open('https://wa.me/?text='+encodeURIComponent('Join me on ChessMaster! ♟ '+window.location.origin+window.location.pathname),'_blank');}
+function toggleEdit(){const p=document.getElementById('edit-panel');if(p.style.display==='none'){p.style.display='block';pickedAvatar=userData.avatar;document.getElementById('edit-username').value=userData.username;buildAvatarGrid();}else p.style.display='none';}
+function buildAvatarGrid(){
+  const g=document.getElementById('avatar-grid');g.innerHTML='';
+  AVATARS.forEach(a=>{const d=document.createElement('div');d.className='avatar-opt'+(a===pickedAvatar?' picked':'');d.textContent=a;d.onclick=()=>{pickedAvatar=a;buildAvatarGrid();};g.appendChild(d);});
+}
+function saveProfile(){
+  const name=document.getElementById('edit-username').value.trim()||userData.username;
+  db.ref('users/'+currentUser.uid).update({username:name,avatar:pickedAvatar||userData.avatar});
+  document.getElementById('edit-panel').style.display='none';alert('✅ Profile saved!');
+}
+// ===== GAMES =====
+function quickPlay(){createGame();}
+function createGame(){
+  const code=Math.random().toString(36).substring(2,8).toUpperCase();
+  currentGame={code,isCreator:true};myColor='w';vsBot=false;vsLocal=false;
+  game.reset();chatLoaded=false;gameRecorded=false;resetClocks();
+  document.getElementById('game-code').textContent=code;
+  showScreen('lobby-screen');
+  db.ref('games/'+code).set({code,whitePlayer:currentUser.uid,status:'waiting',minutes:selectedMinutes,createdAt:Date.now()});
+  db.ref('games/'+code).on('value',snap=>{
+    const d=snap.val();    if(d&&d.blackPlayer&&d.status==='active'){oppUid=d.blackPlayer;if(d.minutes)selectedMinutes=d.minutes;loadOpponentInfo();enterGame();startPolling(code);}
+  });
+}
+function showJoinGame(){const c=prompt('Enter game code:');if(c)joinGame(c.toUpperCase());}
+function joinFromInput(){const c=document.getElementById('join-code-input').value.trim().toUpperCase();if(c.length===6)joinGame(c);else alert('Enter the 6-letter code');}
+function joinGame(code){
+  currentGame={code,isCreator:false};myColor='b';vsBot=false;vsLocal=false;
+  game.reset();chatLoaded=false;gameRecorded=false;resetClocks();
+  db.ref('games/'+code).once('value').then(snap=>{
+    if(!snap.val()){alert('Game not found');return;}
+    oppUid=snap.val().whitePlayer;if(snap.val().minutes)selectedMinutes=snap.val().minutes;
+    db.ref('games/'+code).update({blackPlayer:currentUser.uid,status:'active'});
+    window.history.replaceState({},'',window.location.pathname);
+    loadOpponentInfo();enterGame();startPolling(code);
+  });
+}
+function enterGame(){showScreen('game-screen');renderBoard();renderCaps();updateGameStatus();startClocks();}
+function shareGame(){
+  const url=window.location.origin+window.location.pathname+'?game='+currentGame.code;
+  window.open('https://wa.me/?text='+encodeURIComponent('♟ ChessMaster challenge! Code: '+currentGame.code+' → '+url),'_blank');
+}
+function startPolling(code){
+  if(pollTimer)clearInterval(pollTimer);
+  lastMoveId=0;
+  if(!chatLoaded){chatLoaded=true;loadGameChat();}
+  pollTimer=setInterval(()=>{
+    db.ref('games/'+code+'/moves').orderByKey().startAfter(String(lastMoveId)).once('value').then(snap=>{
+      let changed=false;
+      snap.forEach(child=>{
+        const m=child.val();
+        if(m.type==='move'){if(game.move(m.data)){changed=true;playSound(m.data.captured?'capture':'move');}}
+        lastMoveId=parseInt(child.key);
+      });
+      if(changed){switchClock();renderBoard();renderCaps();updateGameStatus();}
+    });
+  },1000);
+}
+function resignGame(){if(confirm('Resign this game?')){recordResult('loss');db.ref('games/'+currentGame.code).update({status:'finished'});goHome();}}
+function offerDraw(){if(confirm('Offer/accept a draw?')){recordResult('draw');db.ref('games/'+currentGame.code).update({status:'finished'});goHome();}}
+function recordResult(myResult){
+  if(gameRecorded||!currentUser||!userData)return;
+  if(vsBot){oppUid='bot';oppName='🤖 Bot';}
+  if(!oppUid||vsLocal)return;
+  gameRecorded=true;
+  const d=myResult==='win'?16:(myResult==='loss'?-16:4);
+  db.ref('users/'+currentUser.uid).update({rating:userData.rating+d,wins:userData.wins+(myResult==='win'?1:0),losses:userData.losses+(myResult==='loss'?1:0),draws:userData.draws+(myResult==='draw'?1:0),streak:myResult==='win'?(userData.streak||0)+1:0});
+  db.ref('users/'+currentUser.uid+'/history/'+(currentGame?currentGame.code:'x')+Date.now()).set({result:myResult,opp:oppName,date:Date.now()});
+  if(oppUid!=='bot'){
+    db.ref('users/'+oppUid).once('value').then(s=>{
+      const u=s.val();if(!u)return;      const od=myResult==='win'?-16:(myResult==='loss'?16:4);
+      const or=myResult==='win'?'loss':(myResult==='loss'?'win':'draw');
+      db.ref('users/'+oppUid).update({rating:u.rating+od,wins:u.wins+(or==='win'?1:0),losses:u.losses+(or==='loss'?1:0),draws:u.draws+(or==='draw'?1:0)});
+      db.ref('users/'+oppUid+'/history/'+(currentGame?currentGame.code:'x')+Date.now()).set({result:or,opp:userData.username,date:Date.now()});
+    });
+  }
+}
+// ===== BOARD =====
+function sizeBoard(){
+  const w=Math.min(window.innerWidth-28,420);
+  const b=document.getElementById('board');b.style.width=w+'px';
+  const s=w/8;document.querySelectorAll('#board .sq').forEach(sq=>sq.style.fontSize=(s*0.78)+'px');
+}
+function renderBoard(){
+  const board=document.getElementById('board');board.innerHTML='';
+  const pos=game.board();
+  const order=myColor==='b'?[7,6,5,4,3,2,1,0]:[0,1,2,3,4,5,6,7];
+  for(let ri=0;ri<8;ri++)for(let ci=0;ci<8;ci++){
+    const r=order[ri],c=order[ci];
+    const sq=document.createElement('div');
+    const coord='abcdefgh'[c]+(8-r);
+    sq.className='sq '+((r+c)%2===0?'gl':'gd');
+    sq.dataset.sq=coord;
+    const p=pos[r][c];
+    if(p){const k=(p.color==='w'?'w':'b')+p.type.toUpperCase();sq.textContent=PIECES[k];sq.classList.add(p.color==='w'?'piece-w':'piece-b');}
+    if(selected===coord)sq.classList.add('sel');
+    if(selected&&showLegal){const mv=game.moves({square:selected,verbose:true});if(mv.some(x=>x.to===coord))sq.classList.add('hint');}
+    sq.onclick=()=>tapSquare(coord);
+    board.appendChild(sq);
+  }
+  sizeBoard();
+}
+function tapSquare(sq){
+  if(!vsLocal&&game.turn()!==myColor)return;
+  if(selected===sq){selected=null;renderBoard();return;}
+  if(selected){
+    const mv=game.move({from:selected,to:sq,promotion:'q'});
+    if(mv){
+      if(currentGame&&!vsBot&&!vsLocal)db.ref('games/'+currentGame.code+'/moves/'+Date.now()).set({type:'move',data:{from:mv.from,to:mv.to,promotion:'q'},player:currentUser.uid,timestamp:Date.now()});
+      playSound(mv.captured?'capture':'move');
+      selected=null;switchClock();renderBoard();renderCaps();updateGameStatus();
+      if(vsBot)setTimeout(botMove,700);
+      return;
+    }
+  }
+  const p=game.get(sq);
+  selected=(p&&(vsLocal||p.color===myColor))?sq:null;
+  if(selected)playSound('select');
+  renderBoard();
+}function updateGameStatus(){
+  let s=game.turn()==='w'?"White's turn":"Black's turn";
+  if(game.in_checkmate()){s='Checkmate! '+(game.turn()==='w'?'Black':'White')+' wins 🎉';if(!gameRecorded&&!vsLocal)recordResult(game.turn()===myColor?'loss':'win');}
+  else if(game.in_draw()){s='Draw!';if(!gameRecorded&&!vsLocal)recordResult('draw');}
+  else if(game.in_check())s+=' — Check!';
+  const el=document.getElementById('game-status');if(el)el.textContent=s;
+}
+// ===== CHAT =====
+function sendChat(){
+  const i=document.getElementById('chat-input'),t=i.value.trim();if(!t||!currentGame)return;
+  db.ref('games/'+currentGame.code+'/chat/'+Date.now()).set({sender:currentUser.uid,text:t,timestamp:Date.now()});
+  i.value='';
+}
+function loadGameChat(){
+  db.ref('games/'+currentGame.code+'/chat').orderByChild('timestamp').on('child_added',snap=>{
+    const m=snap.val();
+    const d=document.createElement('div');
+    d.className='msg '+(m.sender===currentUser.uid?'me':'other');
+    d.innerHTML=m.text+'<span class="time">'+new Date(m.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</span>';
+    const box=document.getElementById('game-chat');box.appendChild(d);box.scrollTop=box.scrollHeight;
+  });
+}
+// ===== FRIENDS =====
+function addFriend(){
+  const u=document.getElementById('friend-search').value.trim();if(!u)return;
+  db.ref('users').orderByChild('username').equalTo(u).once('value').then(snap=>{
+    if(snap.exists()){snap.forEach(ch=>{if(ch.key!==currentUser.uid)db.ref('friendRequests/'+ch.key+'/'+currentUser.uid).set(Date.now());});alert('✅ Friend request sent!');}
+    else alert('User not found');
+  });
+}
+function loadFriends(){
+  db.ref('friends/'+currentUser.uid).on('value',snap=>{
+    const on=document.getElementById('friends-online'),off=document.getElementById('friends-offline');
+    on.innerHTML='';off.innerHTML='';let total=0,online=0;
+    snap.forEach(child=>{
+      total++;
+      db.ref('users/'+child.key).once('value').then(us=>{
+        const u=us.val();if(!u)return;
+        const isOn=Date.now()-(u.lastOnline||0)<300000;if(isOn)online++;
+        document.getElementById('f-total').textContent=total;document.getElementById('f-online').textContent=online;
+        const d=document.createElement('div');d.className='row';
+        d.innerHTML='<div class="ibox" style="font-size:24px">'+u.avatar+'</div><div style="flex:1"><h5><span class="status-dot '+(isOn?'online':'offline')+'"></span>'+u.username+'</h5><p class="muted">🏆 '+u.rating+'</p></div><button class="btn btn-dark btn-sm" onclick="startChatWith(\''+child.key+'\')">💬</button> <button class="btn btn-grad btn-sm" onclick="createGame()">⚔️</button>';
+        (isOn?on:off).appendChild(d);
+      });
+    });
+    document.getElementById('f-total').textContent=total;
+  });
+  db.ref('friendRequests/'+currentUser.uid).on('child_added',snap=>{
+    db.ref('users/'+snap.key).once('value').then(us=>{
+      const u=us.val();if(!u)return;      const d=document.createElement('div');d.className='row';
+      d.innerHTML='<div class="ibox" style="font-size:24px">'+u.avatar+'</div><div style="flex:1"><h5>'+u.username+'</h5><p class="muted">wants to be your friend</p></div><button class="btn btn-grad btn-sm" onclick="acceptFriend(\''+snap.key+'\')">✓</button> <button class="btn btn-dark btn-sm" onclick="declineFriend(\''+snap.key+'\')">✗</button>';
+      document.getElementById('friend-requests').appendChild(d);
+    });
+  });
+}
+function acceptFriend(uid){db.ref('friends/'+currentUser.uid+'/'+uid).set(true);db.ref('friends/'+uid+'/'+currentUser.uid).set(true);db.ref('friendRequests/'+currentUser.uid+'/'+uid).remove();}
+function declineFriend(uid){db.ref('friendRequests/'+currentUser.uid+'/'+uid).remove();}
+// ===== DM =====
+let currentChatPartner=null;
+function loadChats(){
+  db.ref('chats').on('value',snap=>{
+    const list=document.getElementById('chat-list');list.innerHTML='';
+    snap.forEach(child=>{
+      const chat=child.val();
+      if(chat.participants&&chat.participants.includes(currentUser.uid)){
+        const partner=chat.participants.find(p=>p!==currentUser.uid);
+        db.ref('users/'+partner).once('value').then(us=>{
+          const u=us.val();
+          const d=document.createElement('div');d.className='row';
+          d.innerHTML='<div class="ibox" style="font-size:24px">'+(u?u.avatar:'♟')+'</div><div style="flex:1"><h5>'+(u?u.username:'Unknown')+'</h5><p class="muted">Tap to chat</p></div>';
+          d.onclick=()=>openChat(child.key,partner);
+          list.appendChild(d);
+        });
+      }
+    });
+  });
+}
+function openChat(chatId,partnerId){
+  currentChatPartner={chatId,partnerId};
+  db.ref('users/'+partnerId).once('value').then(s=>{const u=s.val();document.getElementById('chat-partner').textContent=u?u.avatar+' '+u.username:'Friend';});
+  showScreen('chat-detail-screen');
+  document.getElementById('dm-chat').innerHTML='';
+  db.ref('chats/'+chatId+'/messages').orderByChild('timestamp').on('child_added',snap=>{
+    const m=snap.val();
+    const d=document.createElement('div');
+    d.className='msg '+(m.sender===currentUser.uid?'me':'other');
+    if(m.type==='challenge'){
+      d.innerHTML='⚔️ <b>Game Challenge</b><br><span class="muted">'+(m.text||'Timed game')+'</span><br><button class="btn btn-grad btn-sm" style="margin-top:8px" onclick="joinGame(\''+m.code+'\')">Accept</button> <button class="btn btn-dark btn-sm">Decline</button>';
+    }else{
+      d.innerHTML=m.text+'<span class="time">'+new Date(m.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+' ✓✓</span>';
+    }
+    const box=document.getElementById('dm-chat');box.appendChild(d);box.scrollTop=box.scrollHeight;
+  });
+}
+function sendDM(){
+  const i=document.getElementById('dm-input'),t=i.value.trim();
+  if(!t||!currentChatPartner)return;
+  db.ref('chats/'+currentChatPartner.chatId+'/messages/'+Date.now()).set({sender:currentUser.uid,text:t,timestamp:Date.now()});
+  i.value='';}
+function startChatWith(uid){
+  const chatId=[currentUser.uid,uid].sort().join('_');
+  db.ref('chats/'+chatId).update({participants:[currentUser.uid,uid]});
+  openChat(chatId,uid);
+}
+function challengeChatPartner(){
+  if(!currentChatPartner)return;
+  const code=Math.random().toString(36).substring(2,8).toUpperCase();
+  db.ref('games/'+code).set({code,whitePlayer:currentUser.uid,status:'waiting',minutes:selectedMinutes,createdAt:Date.now()});
+  db.ref('chats/'+currentChatPartner.chatId+'/messages/'+Date.now()).set({sender:currentUser.uid,type:'challenge',code,text:selectedMinutes+' min game',timestamp:Date.now()});
+  currentGame={code,isCreator:true};myColor='w';game.reset();chatLoaded=false;gameRecorded=false;resetClocks();
+  document.getElementById('game-code').textContent=code;
+  showScreen('lobby-screen');
+  db.ref('games/'+code).on('value',snap=>{const d=snap.val();if(d&&d.blackPlayer&&d.status==='active'){oppUid=d.blackPlayer;loadOpponentInfo();enterGame();startPolling(code);}});
+}
+// ===== OPPONENT =====
+function loadOpponentInfo(){
+  if(!oppUid||oppUid==='bot')return;
+  db.ref('users/'+oppUid).once('value').then(s=>{
+    const u=s.val();
+    if(u){oppName=u.username;const el=document.getElementById('opp-name');if(el)el.textContent=u.avatar+' '+u.username+' ('+u.rating+')';}
+  });
+}
+function openOpponentProfile(){
+  if(!oppUid||oppUid==='bot'){alert('Playing 
+  // ===== SOUNDS =====
+let AC=null;
+function playSound(kind){
+  if(!soundOn)return;
+  try{
+    AC=AC||new (window.AudioContext||window.webkitAudioContext)();
+    const o=AC.createOscillator(),g=AC.createGain();
+    o.connect(g);g.connect(AC.destination);
+    o.frequency.value=kind==='capture'?220:kind==='select'?520:kind==='check'?330:440;
+    o.type='sine';g.gain.value=0.08;
+    o.start();o.stop(AC.currentTime+0.09);
+  }catch(e){}
+}
+function toggleSound(el){el.classList.toggle('on');soundOn=el.classList.contains('on');}
+// ===== CAPTURED PIECES + MATERIAL =====
+function renderCaps(){
+  const hist=game.history({verbose:true});
+  let myPts=0,oppPts=0,myCap='',oppCap='';
+  hist.forEach(m=>{
+    if(m.captured){
+      const v=VAL[m.captured];
+      if(m.color===myColor||vsLocal&&m.color==='w'){myPts+=v;myCap+=PIECES[(m.color==='w'?'b':'w')+m.captured.toUpperCase()];}
+      if(!vsLocal||m.color==='b'){oppPts+=v;oppCap+=PIECES[(m.color==='w'?'b':'w')+m.captured.toUpperCase()];}
+    }
+  });
+  const diff=myPts-oppPts;
+  const b=document.getElementById('cap-bottom'),t=document.getElementById('cap-top');
+  if(b)b.textContent=myCap+(diff>0?' +'+diff:'');
+  if(t)t.textContent=oppCap+(diff<0?' +'+(-diff):'');
+}
+// ===== CLOCKS =====
+function fmt(s){s=Math.max(0,s);return Math.floor(s/60)+':'+('0'+(s%60)).slice(-2);}
+function resetClocks(){timeW=selectedMinutes*60;timeB=selectedMinutes*60;drawClocks();}
+function drawClocks(){
+  const top=document.getElementById('clock-top'),bot=document.getElementById('clock-bottom');
+  if(!top||!bot)return;
+  top.textContent=fmt(myColor==='w'?timeB:timeW);
+  bot.textContent=fmt(myColor==='w'?timeW:timeB);
+  top.classList.toggle('on',!vsLocal&&game.turn()!==myColor);
+  bot.classList.toggle('on',game.turn()===myColor||vsLocal);
+}
+function startClocks(){
+  if(clockTimer)clearInterval(clockTimer);
+  clockTimer=setInterval(()=>{
+    if(!document.getElementById('game-screen').classList.contains('active'))return;
+    if(game.game_over())return;
+    if(game.turn()==='w')timeW--;else timeB--;
+    if(timeW<=0){alert('⏰ Time out! Black wins on time.');if(!vsLocal&&currentGame)recordResult(myColor==='w'?'loss':'win');goHome();return;}
+    if(timeB<=0){alert('⏰ Time out! White wins on time.');if(!vsLocal&&currentGame)recordResult(myColor==='b'?'loss':'win');goHome();return;}
+    drawClocks();  },1000);
+}
+function switchClock(){drawClocks();}
+// ===== BOT =====
+function playBot(){
+  vsBot=true;vsLocal=false;currentGame=null;myColor='w';
+  game.reset();gameRecorded=false;resetClocks();
+  oppUid='bot';oppName='🤖 Bot';
+  document.getElementById('opp-name').textContent='🤖 Bot (greedy)';
+  enterGame();
+}
+function botMove(){
+  if(game.game_over())return;
+  const moves=game.moves({verbose:true});
+  if(!moves.length)return;
+  let best=null,bs=-1;
+  moves.forEach(m=>{
+    let s=Math.random();
+    if(m.captured)s+=VAL[m.captured]*10;
+    if(m.san.includes('#'))s+=1000;
+    game.move(m);if(game.in_check())s+=3;game.undo();
+    if(s>bs){bs=s;best=m;}
+  });
+  game.move(best);
+  playSound(best.captured?'capture':'move');
+  switchClock();renderBoard();renderCaps();updateGameStatus();
+}
+function playLocal(){
+  vsLocal=true;vsBot=false;currentGame=null;myColor='w';
+  game.reset();gameRecorded=false;resetClocks();
+  oppName='Pass & Play';
+  document.getElementById('opp-name').textContent='👥 Pass & Play';
+  enterGame();
+}
+// ===== BOARD THEME =====
+let wood=false;
+(function(){const st=document.createElement('style');st.textContent='body.wood .gl{background:#f0d9b5}body.wood .gd{background:#b58863}';document.head.appendChild(st);})();
+function toggleBoardTheme(){wood=!wood;document.body.classList.toggle('wood',wood);document.getElementById('theme-label').textContent=wood?'Wood Classic':'Green Classic';renderBoard();}
+// ===== LEADERBOARD =====
+const LB=[['MagnusMax ✅',2450],['KnightRider',2387],['ChessQueen',2310],['MasterMind ✅',2285],['CheckmateX',2244],['TheRoyalPawn',2210],['Strategist',2198],['PawnStorm',2167]];
+function renderLeaderboard(){
+  const list=document.getElementById('lb-list');if(!list)return;
+  list.innerHTML=LB.map((p,i)=>'<div class="row"><div class="ibox">'+(i+4)+'</div><div style="flex:1"><h5>'+p[0]+'</h5></div><b style="color:var(--green)">'+p[1]+'</b></div>').join('');
+  const r=userData?userData.rating:1200;
+  let rank=1;LB.forEach(p=>{if(p[1]>r)rank++;});
+  document.getElementById('lb-your-rank').textContent=rank;
+  document.getElementById('lb-your-name').textContent=userData?userData.username:'You';
+  document.getElementById('lb-your-rating').textContent=r;
+}
+// ===== NOTIFICATIONS =====function renderNotifications(){
+  const list=document.getElementById('notif-list');if(!list)return;
+  list.innerHTML='<div class="row"><div class="ibox">🧩</div><div style="flex:1"><h5>Daily Puzzle Ready</h5><p class="muted">Solve now to keep your streak!</p></div></div><div class="row"><div class="ibox">🏆</div><div style="flex:1"><h5>Season 12 is live</h5><p class="muted">Climb the leaderboard!</p></div></div>';
+  db.ref('friendRequests/'+currentUser.uid).on('child_added',snap=>{
+    db.ref('users/'+snap.key).once('value').then(us=>{
+      const u=us.val();if(!u)return;
+      const d=document.createElement('div');d.className='row';
+      d.innerHTML='<div class="ibox">👥</div><div style="flex:1"><h5>'+u.username+' sent a friend request</h5></div><button class="btn btn-grad btn-sm" onclick="acceptFriend(\''+snap.key+'\')">✓</button>';
+      list.prepend(d);
+    });
+  });
+}
+// ===== ONLINE PLAYERS =====
+function loadOnlinePlayers(){
+  const el=document.getElementById('online-players');if(!el||!currentUser)return;
+  db.ref('users').orderByChild('lastOnline').limitToLast(5).on('value',snap=>{
+    el.innerHTML='';
+    snap.forEach(child=>{
+      const u=child.val();if(child.key===currentUser.uid)return;
+      const d=document.createElement('div');d.className='row';
+      d.innerHTML='<div class="ibox" style="font-size:24px">'+u.avatar+'</div><div style="flex:1"><h5><span class="status-dot '+(Date.now()-u.lastOnline<300000?'online':'offline')+'"></span>'+u.username+'</h5><p class="muted">🏆 '+u.rating+'</p></div><button class="btn btn-grad btn-sm" onclick="playWith(\''+child.key+'\')">Play</button>';
+      el.appendChild(d);
+    });
+  });
+}
+function playWith(uid){
+  const chatId=[currentUser.uid,uid].sort().join('_');
+  db.ref('chats/'+chatId).update({participants:[currentUser.uid,uid]});
+  openChat(chatId,uid);challengeChatPartner();
+}
+// ===== PUZZLE =====
+let puzzleGame=null,puzzleSel=null;
+function startPuzzle(){
+  puzzleGame=new Chess('r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5Q2/PPPP1PPP/1NB1K1NR w KQkq - 0 4');
+  puzzleSel=null;showScreen('puzzles-screen');
+  document.getElementById('puzzle-wrap').innerHTML='<div id="puzzle-board" style="display:grid;grid-template-columns:repeat(8,1fr);border:3px solid #2a352c;border-radius:8px;overflow:hidden;margin:10px auto"></div>';
+  renderPuzzle();
+  alert('White to move — find the checkmate in 1! 👑');
+}
+function renderPuzzle(){
+  const board=document.getElementById('puzzle-board');if(!board)return;
+  board.innerHTML='';board.style.width=Math.min(window.innerWidth-28,420)+'px';
+  const pos=puzzleGame.board();
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+    const sq=document.createElement('div');
+    const coord='abcdefgh'[c]+(8-r);
+    sq.className='sq '+((r+c)%2===0?'gl':'gd');
+    sq.dataset.sq=coord;
+    sq.style.fontSize=(Math.min(window.innerWidth-28,420)/8*0.78)+'px';
+    const p=pos[r][c];    if(p){const k=(p.color==='w'?'w':'b')+p.type.toUpperCase();sq.textContent=PIECES[k];sq.classList.add(p.color==='w'?'piece-w':'piece-b');}
+    if(puzzleSel===coord)sq.classList.add('sel');
+    sq.onclick=()=>tapPuzzle(coord);
+    board.appendChild(sq);
+  }
+}
+function tapPuzzle(sq){
+  if(puzzleSel===sq){puzzleSel=null;renderPuzzle();return;}
+  if(puzzleSel){
+    const mv=puzzleGame.move({from:puzzleSel,to:sq,promotion:'q'});
+    if(mv){
+      if(mv.san==='Qxf7#'){playSound('capture');alert('🎉 CORRECT! Qxf7# — checkmate! Puzzle solved!');}
+      else{alert('Not quite — try again! Hint: look at f7 👀');puzzleGame.undo();}
+      puzzleSel=null;renderPuzzle();return;
+    }
+  }
+  const p=puzzleGame.get(sq);
+  puzzleSel=(p&&p.color==='w')?sq:null;
+  renderPuzzle();
+}
+// ===== RICH PLAY SCREEN =====
+function selectTime(m,el){selectedMinutes=m;document.querySelectorAll('#time-tabs .tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');}
+(function(){
+  const ps=document.getElementById('play-screen');
+  if(ps)ps.innerHTML='<div class="topbar"><div class="logo">⚔️ Play</div><div class="chip">🏆 Choose • Challenge</div></div>'+
+  '<div class="tabs"><div class="tab on" onclick="createGame()">🌐 Online</div><div class="tab" onclick="playBot()">🤖 Computer</div><div class="tab" onclick="playLocal()">👥 Local</div></div>'+
+  '<div class="sec">⚡ Quick Play — pick your time</div>'+
+  '<div class="tabs" id="time-tabs"><div class="tab" onclick="selectTime(1,this)">1m</div><div class="tab" onclick="selectTime(3,this)">3m</div><div class="tab" onclick="selectTime(5,this)">5m</div><div class="tab on" onclick="selectTime(10,this)">10m</div><div class="tab" onclick="selectTime(15,this)">15m</div></div>'+
+  '<button class="btn btn-grad" onclick="createGame()">⚔️ Find Match</button>'+
+  '<div class="field">🔑<input id="join-code-input" maxlength="6" placeholder="Join with code" style="letter-spacing:4px;text-transform:uppercase"><button class="btn btn-grad btn-sm" onclick="joinFromInput()">Join</button></div>'+
+  '<div class="sec">🏆 Tournaments</div>'+
+  '<div class="grid g2"><div class="mode"><span class="ico">🏆</span><h4>Rapid Arena</h4><p class="muted">352 playing</p><button class="btn btn-dark btn-sm" onclick="alert(\'Tournaments coming soon!\')">Join Now</button></div><div class="mode"><span class="ico">⚡</span><h4>Blitz Champ</h4><p class="muted">512 playing</p><button class="btn btn-dark btn-sm" onclick="alert(\'Tournaments coming soon!\')">Join Now</button></div></div>'+
+  '<div class="sec">🕐 Recent Games</div><div id="pg-recent"></div>';
+})();
+// ===== INIT =====
+window.addEventListener('resize',sizeBoard);
+const urlParams=new URLSearchParams(window.location.search);
+const pendingGame=urlParams.get('game');
+if(pendingGame){auth.onAuthStateChanged(u=>{if(u)setTimeout(()=>joinGame(pendingGame),1500);});}
+</script>
+</body>
+</html>
