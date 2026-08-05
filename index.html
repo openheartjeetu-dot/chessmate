@@ -82,6 +82,8 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 </style>
 </head>
 <body>
+  <script>window.addEventListener('error',function(e){var d=document.getElementById('errbox');if(d)d.textContent='ERR: '+e.message+' (line '+e.lineno+')';},true);</script>
+<div id="errbox" style="color:#ff5555;white-space:pre-wrap;padding:8px;font-size:12px"></div>
 
 <!-- AUTH -->
 <div id="auth-screen" class="screen active">
