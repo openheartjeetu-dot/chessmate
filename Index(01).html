@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Chessmate — Think. Plan. Win.</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#05080a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Chessmate">
+<link rel="apple-touch-icon" href="icon.svg">
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js'));}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<style>
+:root{
+  --bg:#05080a;--card:#0d1310;--card2:#131a16;--border:#1e2a22;
+  --green:#a3e635;--green2:#84cc16;--gdark:#3f6212;
+  --gold:#fbbf24;--red:#ef4444;--purple:#a78bfa;--blue:#60a5fa;
+  --text:#e8ede8;--muted:#8fa096;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;min-height:100vh;overflow-x:hidden;padding-bottom:80px}
+.screen{display:none;flex-direction:column;min-height:100vh;padding:14px}
+.screen.active{display:flex}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin:4px 0 16px;gap:10px}
+.back{width:42px;height:42px;min-width:42px;border-radius:50%;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;color:var(--text)}
+.logo{font-size:22px;font-weight:800;letter-spacing:-0.5px}
+.logo b{color:var(--green)}
+.hchip{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:8px 12px;font-size:12px;display:flex;align-items:center;gap:6px;position:relative;cursor:pointer}
+.dotb{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;border-radius:10px;font-size:9px;padding:2px 5px;font-weight:700}
+.card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:16px;margin:8px 0}
+.sec{color:var(--green);font-size:13px;font-weight:700;margin:18px 0 10px;display:flex;justify-content:space-between;align-items:center;text-transform:uppercase;letter-spacing:0.5px}
+.sec .link{color:var(--green);font-size:12px;font-weight:600;cursor:pointer;text-transform:none}
+.muted{color:var(--muted);font-size:12px}
+.grid{display:grid;gap:10px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+.btn{border:none;border-radius:14px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;width:100%;margin:6px 0;color:var(--text);display:flex;align-items:center;justify-content:center;gap:8px;transition:transform 0.1s}
+.btn:active{transform:scale(0.98)}
+.btn-grad{background:linear-gradient(135deg,#3f6212,#84cc16);color:#fff;box-shadow:0 4px 18px rgba(132,204,22,.25)}
+.btn-dark{background:var(--card2);border:1px solid var(--border)}
+.btn-gold{background:linear-gradient(135deg,#713f12,#a16207);color:#fde68a;border:1px solid #ca8a04}
+.btn-red{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.btn-purple{background:linear-gradient(135deg,#4c1d95,#7c3aed);color:#ede9fe}
+.btn-sm{width:auto;padding:10px 16px;font-size:13px;margin:0;border-radius:12px}
+.field{display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:14px;margin:8px 0}
+.field input{background:none;border:none;color:var(--text);flex:1;font-size:15px;outline:none}
+.tabs{display:flex;gap:6px;background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:4px;margin:12px 0;overflow-x:auto}
+.tab{flex:1;min-width:max-content;padding:11px 14px;text-align:center;color:var(--muted);font-weight:600;border-radius:11px;cursor:pointer;font-size:13px;white-space:nowrap}
+.tab.on{color:var(--green);border:1px solid var(--green);background:rgba(163,230,53,.08)}
+.row{display:flex;align-items:center;gap:12px;padding:14px;background:var(--card2);border:1px solid var(--border);border-radius:14px;margin:8px 0;cursor:pointer;transition:background 0.2s}
+.row:active{background:#1a241e}
+.ibox{width:44px;height:44px;min-width:44px;background:#1a231c;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px}
+.row h5{font-size:14px;font-weight:600}
+.row p{font-size:11px;color:var(--muted);margin-top:2px}
+.chev{margin-left:auto;color:var(--muted);font-size:18px}
+.toggle{width:48px;height:26px;background:#2a352c;border-radius:13px;position:relative;cursor:pointer;margin-left:auto;transition:.2s;flex-shrink:0}
+.toggle.on{background:linear-gradient(90deg,#4d7c0f,#84cc16)}
+.toggle::after{content:'';position:absolute;width:22px;height:22px;background:#fff;border-radius:50%;top:2px;left:2px;transition:.2s;box-shadow:0 2px 4px rgba(0,0,0,0.2)}
+.toggle.on::after{left:24px}
+.avatar{width:56px;height:56px;border-radius:50%;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:30px;position:relative;flex-shrink:0}
+.avatar.lg{width:84px;height:84px;font-size:46px}
+.ring{border:2px solid var(--green);border-radius:50%;padding:3px;box-shadow:0 0 14px rgba(163,230,53,.35);display:inline-block}
+.online-dot{position:absolute;bottom:2px;right:2px;width:12px;height:12px;background:#4ade80;border:2px solid var(--bg);border-radius:50%}
+.offline-dot{position:absolute;bottom:2px;right:2px;width:12px;height:12px;background:#64748b;border:2px solid var(--bg);border-radius:50%}
+.tag-gold{color:var(--gold);background:rgba(251,191,36,.12);padding:4px 10px;border-radius:10px;font-size:11px;display:inline-block;font-weight:700;border:1px solid rgba(251,191,36,0.2)}
+.bar{height:6px;background:#233026;border-radius:3px;overflow:hidden;margin:6px 0}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#4d7c0f,#a3e635)}
+.stat{background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:12px;text-align:center}
+.stat b{font-size:20px;display:block;color:var(--green)}
+.stat span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px}
+</style>
+</head>
+<body>
+<style>
+#board{display:grid;grid-template-columns:repeat(8,1fr);border:3px solid #2a352c;border-radius:10px;overflow:hidden;margin:6px auto}
+.sq{aspect-ratio:1/1;width:100%;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;line-height:1}
+.gl{background:#eeeed2}.gd{background:#769656}
+body.wood .gl{background:#f0d9b5}body.wood .gd{background:#b58863}
+.sel{box-shadow:inset 0 0 0 4px #f7ec59}
+.hint::after{content:'';position:absolute;width:28%;height:28%;background:rgba(0,0,0,.3);border-radius:50%}
+.piece-w{color:#fff;text-shadow:0 0 2px #000,0 1px 2px #000}
+.piece-b{color:#1a1a1a;text-shadow:0 1px 1px rgba(255,255,255,.25)}
+.coord{position:absolute;font-size:8px;font-weight:700;opacity:.7}
+.coord.f{bottom:2px;right:3px}.coord.r{top:2px;left:3px}
+.clock{font-family:monospace;font-size:18px;background:var(--card2);border:1px solid var(--border);padding:8px 16px;border-radius:12px}
+.clock.on{background:var(--green);color:#0a1a05;font-weight:700;border-color:var(--green)}
+.clock.low{background:rgba(239,68,68,.15);color:var(--red);border-color:var(--red)}
+.cap-strip{min-height:22px;font-size:15px;letter-spacing:2px;margin:2px 4px;color:#cfd8cf}
+.nav{position:fixed;bottom:0;left:0;right:0;background:#0a0f0c;border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:10px 0;z-index:50}
+.nav-item{display:flex;flex-direction:column;align-items:center;font-size:10px;color:var(--muted);cursor:pointer;min-width:56px}
+.nav-item .ni{font-size:22px;margin-bottom:3px}
+.nav-item.active{color:var(--green)}
+.hero{border-radius:20px;padding:18px;margin:8px 0;background:linear-gradient(120deg,#0d1a0d,#13240f);border:1px solid #2a4a1e;position:relative;overflow:hidden}
+.hero .bigking{position:absolute;right:10px;top:-6px;font-size:110px;color:var(--green2);text-shadow:0 0 40px rgba(132,204,22,.7)}
+.radar{width:150px;height:150px;margin:14px auto;border-radius:50%;position:relative;background:radial-gradient(circle,rgba(163,230,53,.08),transparent 70%);border:1px solid var(--border)}
+.radar::before{content:'';position:absolute;inset:0;border-radius:50%;border:2px solid transparent;border-top-color:var(--green);animation:spin 1.6s linear infinite}
+.radar::after{content:'';position:absolute;inset:18px;border-radius:50%;border:1px dashed #2a4a1e}
+@keyframes spin{to{transform:rotate(360deg)}}
+.radar .pc{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:44px}
+.podium{display:flex;align-items:flex-end;justify-content:center;gap:16px;margin:16px 0 8px}
+.podium .p{text-align:center}
+.podium .p .avatar{margin:0 auto}
+.podium .p1 .avatar{width:88px;height:88px;font-size:46px;border:3px solid var(--gold);box-shadow:0 0 22px rgba(251,191,36,.45)}
+.podium .p2 .avatar{border:3px solid #cbd5e1}
+.podium .p3 .avatar{border:3px solid #b45309}
+.chat-box{background:#0b141a;border:1px solid var(--border);border-radius:14px;padding:12px;margin-top:8px;max-height:260px;overflow-y:auto}
+.msg{padding:8px 12px;margin:4px 0;border-radius:12px;background:#202c33;font-size:14px;max-width:80%;display:flex;flex-direction:column}
+.msg .time{font-size:10px;opacity:.6;margin-top:2px;align-self:flex-end}
+.msg.me{background:#005c4b;margin-left:auto;border-bottom-right-radius:4px}
+.msg.other{border-bottom-left-radius:4px}
+.avatar-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:8px 0}
+.avatar-opt{font-size:26px;text-align:center;padding:8px;background:var(--card2);border-radius:10px;cursor:pointer}
+.avatar-opt.picked{background:var(--gdark);border:1px solid var(--green)}
+.result-win{color:#4ade80;font-weight:700}.result-loss{color:#ef4444;font-weight:700}.result-draw{color:#fbbf24;font-weight:700}
+.code-display{background:var(--card2);border:1px solid var(--green);padding:16px;border-radius:12px;font-size:30px;letter-spacing:6px;text-align:center;margin:12px 0;font-weight:800;color:var(--green);box-shadow:0 0 20px rgba(163,230,53,.15)}
+.mcard{background:var(--card2);border:1px solid var(--border);border-radius:16px;padding:14px;text-align:center;cursor:pointer;position:relative;overflow:hidden}
+.mcard .ico{font-size:34px;display:block;margin-bottom:8px;filter:drop-shadow(0 0 12px rgba(163,230,53,.4))}
+.mcard h4{font-size:14px;margin-bottom:4px}
+.mcard.g{background:linear-gradient(160deg,#12210f,#0d1310)}
+.mcard.b{background:linear-gradient(160deg,#0f1a24,#0d1310)}
+.mcard.p{background:linear-gradient(160deg,#171226,#0d1310)}
+.mcard.o{background:linear-gradient(160deg,#241a0a,#0d1310)}
+.sheet{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--border);border-radius:20px 20px 0 0;padding:16px;z-index:90;max-height:70vh;overflow-y:auto;display:none}
+.sheet.open{display:block}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.78);display:none;align-items:center;justify-content:center;z-index:100}
+.modal.open{display:flex}
+.modal-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:24px;width:86%;max-width:360px;text-align:center;max-height:86vh;overflow-y:auto}
+.ribbon{position:absolute;top:10px;left:-26px;transform:rotate(-45deg);font-size:10px;padding:3px 28px;color:#fff;font-weight:700}
+</style>
+
+<!-- AUTH -->
+<div id="auth-screen" class="screen active">
+ <div class="topbar"><div class="back">←</div><div class="hchip">🌐 English</div></div>
+ <div style="text-align:center;margin:10px 0 20px">
+  <div class="ring" style="display:inline-block"><div class="avatar lg">♚</div></div>
+  <h2 style="margin-top:14px">Welcome to <span style="color:var(--green)">Chessmate</span> 👑</h2>
+  <p class="muted">Join millions of players worldwide</p>
+ </div>
+ <div class="tabs"><div class="tab on" id="tab-signup" onclick="switchTab('signup')">👤+ Sign Up</div><div class="tab" id="tab-login" onclick="switchTab('login')">→ Log In</div></div>
+ <div id="signup-form">
+  <div class="field">👤<input id="signup-name" placeholder="Full Name"></div>
+  <div class="field">✉️<input id="signup-email" type="email" placeholder="Email Address"></div>
+  <div class="field">@<input id="signup-username" placeholder="Username"></div>
+  <div class="field">🔒<input id="signup-password" type="password" placeholder="Password (8+ chars)"><span onclick="peek(this,'signup-password')">👁</span></div>
+  <button class="btn btn-grad" onclick="signup()">Create Account →</button>
+ </div>
+ <div id="login-form" style="display:none">
+  <div class="field">👤<input id="auth-email" placeholder="Email or Username"></div>
+  <div class="field">🔒<input id="auth-password" type="password" placeholder="Password"><span onclick="peek(this,'auth-password')">👁</span></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin:4px 2px">
+    <label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" checked style="accent-color:var(--green)"> Remember me</label>
+    <span style="color:var(--green);font-size:12px;cursor:pointer" onclick="alert('Reset link sent to your email!')">Forgot Password?</span>
+  </div>
+  <button class="btn btn-grad" onclick="login()">Log In →</button>
+ </div>
+ <p class="muted" style="text-align:center;margin:10px 0">or continue with</p>
+ <div class="grid g3">
+  <button class="btn btn-dark btn-sm" style="width:100%" onclick="googleLogin()">🔵 Google</button>
+  <button class="btn btn-dark btn-sm" style="width:100%" onclick="alert('Apple login coming soon!')">🍎 Apple</button>
+  <button class="btn btn-dark btn-sm" style="width:100%" onclick="alert('Facebook login coming soon!')">📘 Facebook</button>
+ </div>
+ <button class="btn btn-dark" onclick="guestLogin()">🎮 Continue as Guest</button>
+ <p class="muted" style="text-align:center;margin-top:10px">By continuing you agree to our <span style="color:var(--green)">Terms</span> & <span style="color:var(--green)">Privacy Policy</span></p>
+</div>
+<!-- HOME -->
+<div id="home-screen" class="screen">
+ <div class="topbar">
+  <div style="display:flex;align-items:center;gap:10px" onclick="showProfile()">
+   <div class="avatar" style="width:44px;height:44px;font-size:24px" id="h-avatar">♟<span class="online-dot"></span></div>
+   <div><h5 id="h-name">Player</h5><p class="muted">🏆 <span id="h-rating">1200</span></p></div>
+  </div>
+  <div class="logo">♟ Chess<b>mate</b></div>
+  <div style="display:flex;gap:8px">
+   <div class="hchip" onclick="showNotifications()">🔔<span class="dotb">3</span></div>
+   <div class="hchip" onclick="showSettings()">⚙️</div>
+  </div>
+ </div>
+ <div class="hero">
+  <div class="bigking">♚</div>
+  <p style="color:var(--green);font-weight:600">Welcome back,</p>
+  <h2 id="h-welcome" style="font-size:26px;text-transform:uppercase">PLAYER!</h2>
+  <p class="muted">Every move shapes your victory.</p>
+  <div class="grid g3" style="margin-top:12px">
+   <div class="stat"><b id="h-rating2">1200</b><span>Rating</span></div>
+   <div class="stat"><b id="h-winrate">0%</b><span>Win rate</span></div>
+   <div class="stat"><b id="h-games">0</b><span>Games</span></div>
+  </div>
+ </div>
+ <div class="grid g4">
+  <div class="mcard g" onclick="showPlay()"><span class="ico">♟</span><h4>PLAY</h4><p class="muted">Online</p></div>
+  <div class="mcard b" onclick="showPuzzles()"><span class="ico">🧩</span><h4>PUZZLES</h4><p class="muted">Daily boost</p></div>
+  <div class="mcard p" onclick="showLearn()"><span class="ico">🎓</span><h4>LEARN</h4><p class="muted">Courses</p></div>
+  <div class="mcard o" onclick="showPlay()"><span class="ico">⚔️</span><h4>BATTLE</h4><p class="muted">Tournaments</p></div>
+ </div>
+ <div class="sec">Play Your Way <span class="link" onclick="showPlay()">View all →</span></div>
+ <div class="tabs">
+  <div class="tab" onclick="quickTime(5)">⚡ 5m</div>
+  <div class="tab" onclick="quickTime(3)">⏱ 3m</div>
+  <div class="tab" onclick="quickTime(10)">🕐 10m</div>
+  <div class="tab" onclick="quickTime(30)">📅 30m</div>
+  <div class="tab" onclick="showPlay()">🎛 Custom</div>
+ </div>
+ <div class="grid g2">
+  <div class="card" style="margin:0">
+   <div class="sec" style="margin:0 0 6px">🧩 Daily Puzzle</div>
+   <p class="muted">Solve and sharpen your mind!</p>
+   <div class="bar"><i style="width:60%"></i></div>
+   <p class="muted">Difficulty: Medium • 🪙 20</p>
+   <button class="btn btn-grad btn-sm" onclick="startPuzzle(0)">Solve Puzzle</button>
+  </div>
+  <div class="card" style="margin:0">
+   <div class="sec" style="margin:0 0 6px">🎯 Today's Challenge</div>
+   <p class="muted">Beat Magnus Bot (1600)</p>
+   <div class="bar"><i style="width:33%"></i></div>
+   <p class="muted">Win 3 in a row → 🎁 Grand Prize</p>
+   <button class="btn btn-gold btn-sm" onclick="challengeBot(1600)">▶ Play</button>
+  </div>
+ </div>
+ <div class="grid g3" style="margin-top:10px">
+  <div class="card" style="margin:0">
+   <div class="sec" style="margin:0 0 6px">Friends Online</div>
+   <div id="home-friends"><p class="muted">Loading…</p></div>
+  </div>
+  <div class="card" style="margin:0">
+   <div class="sec" style="margin:0 0 6px">Leaderboard</div>
+   <div id="home-lb"></div>
+  </div>
+  <div class="card" style="margin:0">
+   <div class="sec" style="margin:0 0 6px">Recent Games</div>
+   <div id="home-recent"><p class="muted">No games yet</p></div>
+  </div>
+ </div>
+</div>
+<!-- PLAY -->
+<div id="play-screen" class="screen">
+ <div class="topbar"><div class="back" onclick="goHome()">←</div>
+  <div style="text-align:center"><div class="logo">Play</div><div class="subtitle">Choose your game. Challenge yourself.</div></div>
+  <div class="hchip">🏆 <span id="p-rating">1200</span></div></div>
+ <div class="tabs">
+  <div class="tab on">🌐 Online</div>
+  <div class="tab" onclick="showAI()">🖥 Computer</div>
+  <div class="tab" onclick="showFriends()">👥 Friends</div>
+  <div class="tab" onclick="playLocal()">👤 Local</div>
+ </div>
+ <div class="card">
+  <div class="sec" style="margin:0 0 6px">⚡ Quick Play</div>
+  <p class="muted">Jump into a game instantly</p>
+  <div class="tabs" id="time-tabs">
+   <div class="tab" onclick="selectTime(1,this)">1m<br><small>Bullet</small></div>
+   <div class="tab" onclick="selectTime(3,this)">3m<br><small>Blitz</small></div>
+   <div class="tab" onclick="selectTime(5,this)">5m<br><small>Blitz</small></div>
+   <div class="tab on" onclick="selectTime(10,this)">10m<br><small>Rapid</small></div>
+   <div class="tab" onclick="selectTime(15,this)">15m<br><small>Rapid</small></div>
+   <div class="tab" onclick="selectTime(30,this)">30m<br><small>Classic</small></div>
+  </div>
+  <button class="btn btn-grad" onclick="findMatch()">⚔️ Find Match</button>
+  <div class="field">🔑<input id="join-code-input" maxlength="6" placeholder="Join with room code" style="letter-spacing:4px;text-transform:uppercase"><button class="btn btn-dark btn-sm" onclick="joinFromInput()">Join</button></div>
+ </div>
+ <div class="card">
+  <div class="sec" style="margin:0 0 6px">👑 Play by Rating</div>
+  <p class="muted">Your rating: <span id="p-rating2" style="color:var(--green)">1200</span></p>
+  <div class="tabs">
+   <div class="tab" onclick="alert('Searching under 1000…')"><1000</div>
+   <div class="tab" onclick="alert('Searching 1000-1200…')">1000-1200</div>
+   <div class="tab on">1200-1400</div>
+   <div class="tab" onclick="alert('Searching 1400-1600…')">1400-1600</div>
+   <div class="tab" onclick="alert('Searching 1600+…')">1600+</div>
+  </div>
+ </div>
+ <div class="grid g2">
+  <div class="card" style="margin:0">
+   <div class="sec" style="margin:0 0 6px">📅 Daily Challenges</div>
+   <p class="muted">New in <span id="dl-timer">--:--:--</span></p>
+   <p style="margin:6px 0"><b>Challenge of the Day</b><br><span class="muted">Find the winning move! (3/5)</span></p>
+   <div class="bar"><i style="width:60%"></i></div>
+   <button class="btn btn-dark btn-sm" onclick="startPuzzle(1)">Solve Challenge →</button>
+  </div>
+  <div class="card" style="margin:0">
+   <div class="sec" style="margin:0 0 6px">👥 Play with a Friend</div>
+   <p class="muted">Invite and play with friends</p>
+   <div class="field">👤<input id="friend-challenge-input" placeholder="Friend username"></div>
+   <button class="btn btn-dark btn-sm" onclick="challengeFriend()">🔍 Challenge</button>
+   <button class="btn btn-grad btn-sm" style="margin-top:6px" onclick="createGame()">🛡 Create Private Room</button>
+  </div>
+ </div>
+ <div class="sec">🏆 Tournaments <span class="link" onclick="alert('Tournaments launch next season!')">View All →</span></div>
+ <div class="grid g4">
+  <div class="mcard g" style="position:relative"><span class="ribbon" style="background:#16a34a">LIVE</span><span class="ico">🏆</span><h4>Rapid Arena</h4><p class="muted">352 playing</p><button class="btn btn-dark btn-sm" onclick="alert('✅ You are on the Rapid Arena list!')">Join</button></div>
+  <div class="mcard b" style="position:relative"><span class="ribbon" style="background:#ea580c">HOT</span><span class="ico">🥈</span><h4>Blitz Champ</h4><p class="muted">512 playing</p><button class="btn btn-dark btn-sm" onclick="alert('Blitz Championship starts in 01:20:15')">Join</button></div>
+  <div class="mcard p" style="position:relative"><span class="ribbon" style="background:#2563eb">SOON</span><span class="ico">🥉</span><h4>Bullet Brawl</h4><p class="muted">256 playing</p><button class="btn btn-dark btn-sm" onclick="alert('Bullet Brawl starts in 03:10:45')">Join</button></div>
+  <div class="mcard o"><span class="ico">♞</span><h4>Weekend Classic</h4><p class="muted">128 playing</p><button class="btn btn-dark btn-sm" onclick="alert('Weekend Classic starts Saturday!')">Join</button></div>
+ </div>
+ <div class="sec">🕐 Recent Games <span class="link" onclick="showHistory()">View History →</span></div>
+ <div id="play-recent"></div>
+</div>
+
+<!-- LOBBY / MATCHMAKING -->
+<div id="lobby-screen" class="screen">
+ <div class="topbar"><div class="back" onclick="cancelMatch()">←</div>
+  <div style="text-align:center"><div class="logo">Live Play ⚡</div><div class="subtitle">Play real players around the world</div></div>
+  <div class="hchip">🏆 <span id="l-rating">1200</span></div></div>
+ <div class="card" style="text-align:center">
+  <div class="radar"><div class="pc">♙</div></div>
+  <h3 id="lobby-title">Finding Opponent...</h3>
+  <p class="muted" id="lobby-sub">Looking for players near your rating</p>
+  <p style="font-size:24px;font-weight:800;color:var(--green);font-family:monospace" id="lobby-timer">00:00</p>
+  <div class="code-display" id="game-code" style="display:none">------</div>
+  <p class="muted" id="lobby-note">Matching you with the best available player…</p>
+  <button class="btn btn-grad" id="share-wa" style="display:none" onclick="shareWhatsApp()">📤 Share via WhatsApp</button>
+  <button class="btn btn-dark" onclick="cancelMatch()">Cancel</button>
+ </div>
+ <div class="grid g2">
+  <div class="stat"><b id="l-games">0</b><span>Games Played</span></div>
+  <div class="stat"><b id="l-win">0%</b><span>Win Rate</span></div>
+ </div>
+</div>
+<!-- PLAY WITH AI -->
+<div id="ai-screen" class="screen">
+ <div class="topbar"><div class="back" onclick="showPlay()">←</div>
+  <div><div class="logo">Play with AI</div><div class="subtitle">Challenge AI and improve your skills ✨</div></div>
+  <div class="hchip">🏆 <span id="a-rating">1200</span></div></div>
+ <div class="sec">Choose AI Opponent</div>
+ <div class="grid g4" id="bot-cards">
+  <div class="mcard g" onclick="selectBot(0,this)" style="border:1px solid var(--green)"><span class="ico">🤖</span><h4 style="color:var(--green)">Easy</h4><p><b>Bot Sam</b></p><p class="muted">📶 800</p><p class="muted">New to Chess</p></div>
+  <div class="mcard b" onclick="selectBot(1,this)"><span class="ico">🤖</span><h4 style="color:var(--blue)">Medium</h4><p><b>Bot Alex</b></p><p class="muted">📶 1200</p><p class="muted">Casual Player</p></div>
+  <div class="mcard o" onclick="selectBot(2,this)"><span class="ico">🤖</span><h4 style="color:var(--red)">Hard</h4><p><b>Bot Magnus</b></p><p class="muted">📶 1600</p><p class="muted">Advanced</p></div>
+  <div class="mcard p" onclick="selectBot(3,this)"><span class="ico">🤖</span><h4 style="color:var(--purple)">Expert</h4><p><b>Bot Stockfish</b></p><p class="muted">📶 2000</p><p class="muted">Grandmaster</p></div>
+ </div>
+ <div class="sec">Game Setup</div>
+ <div class="card">
+  <div class="row" style="margin:0"><div class="ibox">⏱</div><div><h5>Color</h5><p>Choose your side</p></div>
+   <div style="display:flex;gap:6px;margin-left:auto">
+    <button class="btn btn-grad btn-sm" id="col-w" onclick="pickColor('w')">♙ White</button>
+    <button class="btn btn-dark btn-sm" id="col-b" onclick="pickColor('b')">♟ Black</button>
+   </div></div>
+  <div class="row" style="margin:0"><div class="ibox">🎚</div><div style="flex:1"><h5>Difficulty Level</h5>
+   <input type="range" min="400" max="2400" step="100" value="800" id="ai-slider" oninput="document.getElementById('ai-val').textContent=this.value" style="width:100%;accent-color:var(--green)">
+   <p class="muted">400 — <b id="ai-val" style="color:var(--green)">800</b> — 2400</p></div></div>
+  <div class="row" style="margin:0"><div class="ibox">⏳</div><div><h5>Time Control</h5><p>Set game time</p></div>
+   <div class="tabs" style="margin:0">
+    <div class="tab" onclick="selectTime(1,this)">1m</div>
+    <div class="tab" onclick="selectTime(5,this)">5m</div>
+    <div class="tab on" onclick="selectTime(10,this)">10m</div>
+    <div class="tab" onclick="selectTime(30,this)">30m</div>
+   </div></div>
+  <div class="row" style="margin:0"><div class="ibox">🏁</div><div><h5>Board</h5><p>Choose board theme</p></div>
+   <div style="display:flex;gap:6px;margin-left:auto">
+    <button class="btn btn-grad btn-sm" id="bt-g" onclick="boardTheme('g')">Classic</button>
+    <button class="btn btn-dark btn-sm" id="bt-w" onclick="boardTheme('w')">Wood</button>
+   </div></div>
+  <div class="row" style="margin:0"><div class="ibox">🧠</div><div><h5>AI Behavior</h5><p>Playing style of AI</p></div>
+   <div class="tabs" style="margin:0">
+    <div class="tab on">Balanced</div><div class="tab" onclick="alert('Aggressive style set! 🔥')">Aggro</div><div class="tab" onclick="alert('Defensive style set! 🛡')">Solid</div>
+   </div></div>
+  <div class="row" style="margin:0"><div class="ibox">❓</div><div><h5>Tutor Mode</h5><p>Hints and learn as you play</p></div>
+   <div class="toggle on" id="tutor-toggle" onclick="this.classList.toggle('on')"></div></div>
+ </div>
+ <div class="sec">AI Stats</div>
+ <div class="card" style="text-align:center">
+  <div style="width:110px;height:110px;border-radius:50%;background:conic-gradient(var(--green) 0 78%, #233026 0);margin:6px auto;display:flex;align-items:center;justify-content:center"><div style="width:84px;height:84px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800">78%</div></div>
+  <p class="muted">Win Rate vs players</p>
+  <div class="grid g2" style="margin-top:10px">
+   <div class="stat"><b id="ai-games">0</b><span>Your games vs AI</span></div>
+   <div class="stat"><b id="ai-wins">0</b><span>Your wins</span></div>
+  </div>
+ </div>
+ <button class="btn btn-grad" onclick="startBotGame()">⚔️ Start Game</button>
+</div>
+<!-- GAME -->
+<div id="game-screen" class="screen">
+ <div class="topbar"><div class="back" onclick="confirmExit()">←</div>
+  <div><div class="logo">Live Game</div><div class="subtitle" id="g-mode-label">● Online</div></div>
+  <div style="display:flex;gap:8px">
+   <div class="hchip">👥 <span id="g-spec">128</span></div>
+   <div class="hchip" onclick="toggleGameChat()">💬 Chat</div>
+  </div></div>
+ <div class="card" style="display:flex;align-items:center;gap:12px;padding:10px 14px">
+  <div class="avatar" id="g-opp-avatar">🤖</div>
+  <div style="flex:1"><h5 id="g-opp-name">Opponent</h5><p class="muted">🏆 <span id="g-opp-rating">1200</span> <span id="g-opp-title"></span></p></div>
+  <div class="clock" id="clk-opp">10:00</div>
+ </div>
+ <div class="cap-strip" id="cap-opp"></div>
+ <div id="board"></div>
+ <div class="cap-strip" id="cap-me"></div>
+ <div class="card" style="display:flex;align-items:center;gap:12px;padding:10px 14px">
+  <div class="avatar" id="g-me-avatar">♟</div>
+  <div style="flex:1"><h5 id="g-me-name">You</h5><p class="muted">🏆 <span id="g-me-rating">1200</span></p></div>
+  <div class="clock on" id="clk-me">10:00</div>
+ </div>
+ <p class="muted" style="text-align:center;margin:4px 0" id="g-status">White's turn</p>
+ <div class="grid g3">
+  <button class="btn btn-red btn-sm" onclick="resignGame()"> Resign</button>
+  <button class="btn btn-dark btn-sm" onclick="abortGame()">✖ Abort</button>
+  <button class="btn btn-gold btn-sm" onclick="offerDraw()">🤝 Draw</button>
+ </div>
+ <div class="grid g3">
+  <button class="btn btn-dark btn-sm" onclick="undoMove()">↩ Undo</button>
+  <button class="btn btn-dark btn-sm" onclick="redoMove()">↪ Redo</button>
+  <button class="btn btn-dark btn-sm" onclick="openMoreSheet()">⋯ More</button>
+ </div>
+ <div class="card">
+  <div class="tabs" style="margin:0 0 8px">
+   <div class="tab on" id="mtab-moves" onclick="gameTab('moves')">📜 Moves</div>
+   <div class="tab" id="mtab-chat" onclick="gameTab('chat')">💬 Chat</div>
+   <div class="tab" onclick="analyzeGame()">🔍 Analyze</div>
+  </div>
+  <div id="move-list" style="max-height:180px;overflow-y:auto;font-family:monospace;font-size:14px"></div>
+  <div id="gchat-panel" style="display:none">
+   <div class="chat-box" id="gchat-box"></div>
+   <div class="field" style="margin-top:8px"><input id="gchat-input" placeholder="Type a message..."><button class="btn btn-grad btn-sm" onclick="sendGameChat()">➤</button></div>
+  </div>
+ </div>
+ <div class="grid g3">
+  <div class="stat"><span>Match</span><b style="font-size:12px" id="g-info-mode">Rapid 10m</b></div>
+  <div class="stat"><span>Turn</span><b style="font-size:12px" id="g-turn">White</b></div>
+  <div class="stat"><span>Game ID</span><b style="font-size:12px" id="g-id">#----</b></div>
+ </div>
+</div>
+<div class="sheet" id="more-sheet">
+ <div class="row" onclick="flipBoardView()"><div class="ibox">🔄</div><div><h5>Flip Board</h5></div></div>
+ <div class="row" onclick="toggleSoundRow(this)"><div class="ibox">🔊</div><div><h5>Sound</h5></div><div class="toggle on" id="snd-toggle"></div></div>
+ <div class="row" onclick="showLegalToggle(this)"><div class="ibox">💡</div><div><h5>Show Legal Moves</h5></div><div class="toggle on" id="legal-toggle"></div></div>
+ <div class="row" onclick="analyzeGame()"><div class="ibox">🔍</div><div><h5>Engine Analysis</h5></div></div>
+ <div class="row" onclick="closeMoreSheet()"><div class="ibox">✖</div><div><h5>Close</h5></div></div>
+</div>
+<!-- PUZZLES -->
+<div id="puzzles-screen" class="screen">
+ <div class="topbar"><div class="back" onclick="goHome()">←</div>
+  <div style="text-align:center"><div class="logo">🧩 Puzzles</div><div class="subtitle">Solve puzzles, improve your calculation</div></div>
+  <div class="hchip" onclick="showHistory()">📊</div></div>
+ <div class="grid g2">
+  <div class="card" style="margin:0">
+   <div class="sec" style="margin:0 0 6px">📅 Daily Puzzle</div>
+   <p class="muted">New puzzle in</p>
+   <h3 id="pz-timer" style="font-family:monospace">--:--:--</h3>
+   <p style="margin:6px 0">🔥 <b id="pz-streak">0</b> Days Streak</p>
+   <button class="btn btn-grad btn-sm" onclick="startPuzzle(0)">Solve Daily Puzzle</button>
+  </div>
+  <div class="card" style="margin:0">
+   <div class="sec" style="margin:0 0 6px">📈 Your Puzzle Rating</div>
+   <h2 style="color:var(--purple)" id="pz-rating">1200</h2>
+   <p class="muted"><span style="color:#4ade80">↑ +120</span> vs last 7 days</p>
+   <svg viewBox="0 0 200 60" width="100%" height="60"><polyline points="0,45 30,42 60,35 90,38 120,28 150,22 180,18 196,14" fill="none" stroke="#a78bfa" stroke-width="3"/><circle cx="196" cy="14" r="4" fill="#a78bfa"/></svg>
+  </div>
+ </div>
+ <div class="tabs" id="pz-tabs">
+  <div class="tab on" onclick="filterPuzzles('all',this)">All</div>
+  <div class="tab" onclick="filterPuzzles('m1',this)">Mate in 1</div>
+  <div class="tab" onclick="filterPuzzles('m2',this)">Mate in 2</div>
+  <div class="tab" onclick="filterPuzzles('tac',this)">Tactics</div>
+  <div class="tab" onclick="filterPuzzles('end',this)">Endgame</div>
+ </div>
+ <div id="pz-list"></div>
+ <div class="sec">Puzzle Themes <span class="link">View All →</span></div>
+ <div class="grid g2">
+  <div class="row" style="margin:0" onclick="alert('Pin puzzles: 125 — coming to your daily mix!')"><div class="ibox">📌</div><div><h5>Pin</h5><p>125 puzzles</p></div></div>
+  <div class="row" style="margin:0" onclick="alert('Fork puzzles: 132 — coming to your daily mix!')"><div class="ibox">🔱</div><div><h5>Fork</h5><p>132 puzzles</p></div></div>
+  <div class="row" style="margin:0" onclick="alert('Skewer puzzles: 98 — coming to your daily mix!')"><div class="ibox">🗡</div><div><h5>Skewer</h5><p>98 puzzles</p></div></div>
+  <div class="row" style="margin:0" onclick="alert('Back Rank puzzles: 87 — coming to your daily mix!')"><div class="ibox">🏰</div><div><h5>Back Rank</h5><p>87 puzzles</p></div></div>
+ </div>
+ <div class="grid g2">
+  <div class="card" style="margin:0">
+   <div class="sec" style="margin:0 0 6px">✨ Recommended</div>
+   <p class="muted">Based on your performance</p>
+   <p style="margin:6px 0"><b>White to move — Mate in 2</b><br><span class="muted">Success rate 62%</span></p>
+   <button class="btn btn-purple btn-sm" onclick="startPuzzle(2)">Solve Puzzle →</button>
+  </div>
+  <div class="card" style="margin:0">
+   <div class="sec" style="margin:0 0 6px">🎯 Your Progress</div>
+   <div class="grid g2" style="gap:6px">
+    <div class="stat"><b id="pz-solved">0</b><span>Solved</span></div>
+    <div class="stat"><b id="pz-acc">0%</b><span>Accuracy</span></div>
+   </div>
+   <button class="btn btn-gold btn-sm" onclick="startPuzzleRush()">⚡ Puzzle Rush</button>
+  </div>
+ </div>
+ <div class="sec">Recent Solved <span class="link">View All →</span></div>
+ <div id="pz-recent"><p class="muted">Solve puzzles to see them here!</p></div>
+</div>
+
+<!-- PUZZLE PLAY -->
+<div id="puzzle-play-screen" class="screen">
+ <div class="topbar"><div class="back" onclick="exitPuzzle()">←</div>
+  <div><div class="logo" id="pzp-title">Puzzle</div><div class="subtitle" id="pzp-sub">White to move — find the best move!</div></div>
+  <div class="hchip" id="pzp-diff">🟡 Medium</div></div>
+ <div id="pz-board"></div>
+ <p class="muted" style="text-align:center" id="pz-status">Your move…</p>
+ <div class="grid g3">
+  <button class="btn btn-gold btn-sm" onclick="pzHint()">💡 Hint</button>
+  <button class="btn btn-dark btn-sm" onclick="pzGiveUp()">🏳 Give Up</button>
+  <button class="btn btn-grad btn-sm" onclick="pzNext()">➡ Next</button>
+ </div>
+</div>
+<!-- LEADERBOARD -->
+<div id="lb-screen" class="screen">
+ <div class="topbar"><div class="back" onclick="goHome()">←</div>
+  <div><div class="logo">Leaderboard 👑</div><div class="subtitle">Compete with the best players worldwide</div></div>
+  <div class="hchip">📅 Season 12</div></div>
+ <div class="tabs">
+  <div class="tab on">🌐 Global</div>
+  <div class="tab" onclick="alert('Friends leaderboard: add friends to compare!')">👥 Friends</div>
+  <div class="tab" onclick="alert('Country leaderboard: India #23 🇮')">🇮 Country</div>
+  <div class="tab" onclick="alert('Clubs launch next season!')">🛡 Club</div>
+ </div>
+ <div class="card" style="display:flex;align-items:center;gap:12px">
+  <div style="font-size:52px">🏆</div>
+  <div style="flex:1"><p class="muted">Season 12</p><h3>Top Players Worldwide</h3><p class="muted">⏱ Ends in: <span id="lb-countdown">12d 18h 34m</span></p></div>
+  <button class="btn btn-gold btn-sm" onclick="alert('🎁 Season Rewards: reach Gold rank for a free avatar frame!')">🎁</button>
+ </div>
+ <div class="podium">
+  <div class="p p2"><div class="avatar">🧑‍💼</div><p style="font-size:11px;margin-top:4px">🥈 KnightRider</p><b style="color:#cbd5e1">2387</b></div>
+  <div class="p p1"><div style="font-size:16px">👑</div><div class="avatar">🧑</div><p style="font-size:11px;margin-top:4px">MagnusMax ✅</p><b style="color:var(--gold)">2450</b></div>
+  <div class="p p3"><div class="avatar">👩</div><p style="font-size:11px;margin-top:4px">🥉 ChessQueen</p><b style="color:#b45309">2310</b></div>
+ </div>
+ <div class="card" style="padding:8px">
+  <div class="row" style="margin:4px 0"><b class="muted">4</b><div class="avatar" style="width:36px;height:36px;font-size:18px">🧔</div><div style="flex:1"><h5>MasterMind ✅</h5></div><b style="color:var(--green)">2285</b></div>
+  <div class="row" style="margin:4px 0"><b class="muted">5</b><div class="avatar" style="width:36px;height:36px;font-size:18px">👨</div><div style="flex:1"><h5>CheckmateX</h5></div><b style="color:var(--green)">2244</b></div>
+  <div class="row" style="margin:4px 0"><b class="muted">6</b><div class="avatar" style="width:36px;height:36px;font-size:18px">👩‍🦰</div><div style="flex:1"><h5>TheRoyalPawn</h5></div><b style="color:var(--green)">2210</b></div>
+  <div class="row" style="margin:4px 0"><b class="muted">7</b><div class="avatar" style="width:36px;height:36px;font-size:18px">🧑</div><div style="flex:1"><h5>Strategist</h5></div><b style="color:var(--green)">2198</b></div>
+  <div class="row" style="margin:4px 0;border:1px solid var(--green)"><b id="lb-your-rank">23</b><div class="avatar" style="width:36px;height:36px;font-size:18px" id="lb-avatar">♟</div><div style="flex:1"><h5 id="lb-name" style="color:var(--green)">You</h5><p class="muted">Keep improving!</p></div><b style="color:var(--gold)" id="lb-rating">1200</b></div>
+ </div>
+ <div class="grid g2">
+  <div class="stat"><b id="lb-best">1200</b><span>Your Best Rating</span></div>
+  <div class="stat"><b style="color:var(--purple)">Top 4%</b><span>Of all players</span></div>
+ </div>
+</div>
+
+<!-- NOTIFICATIONS -->
+<div id="notif-screen" class="screen">
+ <div class="topbar"><div class="back" onclick="goHome()">←</div>
+  <div style="text-align:center"><div class="logo">Notifications</div><div class="subtitle">Stay updated with everything</div></div>
+  <span class="link" style="color:var(--green);font-size:12px" onclick="markAllRead()">✓ Mark all read</span></div>
+ <div class="tabs">
+  <div class="tab on">🔔 All</div>
+  <div class="tab" onclick="alert('Matches: your last 5 game results ')">⚔ Matches</div>
+  <div class="tab" onclick="alert('Friend activity appears here!')">👥 Friends</div>
+  <div class="tab" onclick="alert('Challenges appear here!')">⚡ Challenges</div>
+  <div class="tab" onclick="alert('System messages appear here!')">⚙️ System</div>
+ </div>
+ <div class="sec">📌 Priority</div>
+ <div id="notif-priority"><p class="muted">No urgent notifications</p></div>
+ <div class="sec">📅 Today</div>
+ <div class="row"><div class="ibox">🧩</div><div style="flex:1"><h5>Daily Puzzle Ready</h5><p>Your daily puzzle is ready. Solve now!</p></div><span class="muted">2h ago</span></div>
+ <div class="row"><div class="ibox">📊</div><div style="flex:1"><h5>Weekly Report Available</h5><p>Check your game stats and improvement</p></div><span class="muted">3h ago</span></div>
+ <div class="row"><div class="ibox">🏆</div><div style="flex:1"><h5>You reached a new rating!</h5><p>Congratulations on your milestone</p></div><span class="muted">5h ago</span></div>
+ <div class="sec">🕐 Earlier</div>
+ <div class="row"><div class="ibox">📢</div><div style="flex:1"><h5>New Tournament Available</h5><p>Join the Weekend Blitz Championship</p></div><span class="muted">Yesterday</span></div>
+ <div class="row"><div class="ibox">🎁</div><div style="flex:1"><h5>You have a free reward!</h5><p>Login bonus is ready. Claim now!</p><p style="color:var(--green);font-size:12px" onclick="alert('🎉 +20 coins claimed!')">Claim</p></div><span class="muted">3d ago</span></div>
+</div>
+<!-- FRIENDS -->
+<div id="friends-screen" class="screen">
+ <div class="topbar"><div class="back" onclick="goHome()">←</div>
+  <div style="text-align:center"><div class="logo">👥 Friends</div><div class="subtitle">Connect, challenge and grow together</div></div>
+  <div style="display:flex;gap:8px"><div class="hchip" onclick="focusFriendSearch()">👤+</div></div></div>
+ <div class="tabs">
+  <div class="tab on">👥 Friends</div>
+  <div class="tab" onclick="alert('Online friends shown below with 🟢')">🟢 Online</div>
+  <div class="tab" onclick="alert('Requests shown below 👇')">✉️ Requests <span class="dotb" style="position:static" id="f-req-badge">0</span></div>
+  <div class="tab" onclick="alert('Suggestions: play a few games to get friend suggestions!')">✨ Suggestions</div>
+  <div class="tab" onclick="alert('No blocked players 🙂')">🚫 Blocked</div>
+ </div>
+ <div class="card" style="display:flex;gap:12px;align-items:center">
+  <div class="ring"><div class="avatar" id="f-avatar">♟<span class="online-dot"></span></div></div>
+  <div style="flex:1"><h4 id="f-name">You</h4><span class="tag-gold">👑 Chess Explorer</span><p class="muted">🏆 <span id="f-rating">1200</span></p></div>
+  <button class="btn btn-dark btn-sm" onclick="showProfile()">Edit</button>
+ </div>
+ <div class="grid g4">
+  <div class="stat"><b id="f-count">0</b><span>Friends</span></div>
+  <div class="stat"><b id="f-online">0</b><span>Online</span></div>
+  <div class="stat"><b id="f-playing">0</b><span>Playing</span></div>
+  <div class="stat"><b id="f-challenges">0</b><span>Challenges</span></div>
+ </div>
+ <div class="card">
+  <div class="field" style="margin:0">🔍<input id="friend-search" placeholder="Search username..."><button class="btn btn-grad btn-sm" onclick="addFriendPrompt()">Add</button></div>
+ </div>
+ <div class="sec">🟢 Online Friends <span class="link">See All →</span></div>
+ <div id="f-online-row" style="display:flex;gap:12px;overflow-x:auto;padding:6px 2px"></div>
+ <div class="sec">✉️ Friend Requests</div>
+ <div id="f-requests"><p class="muted">No pending requests</p></div>
+ <div class="sec">All Friends <span class="link">Sort: Last Active </span></div>
+ <div id="f-list"><p class="muted">Add friends to play together!</p></div>
+ <div class="grid g4">
+  <div class="mcard g" onclick="alert('Groups launch soon!')"><span class="ico">👥</span><h4 style="font-size:11px">Create Group</h4></div>
+  <div class="mcard b" onclick="alert('Friend leaderboard: compare with friends!')"><span class="ico">📊</span><h4 style="font-size:11px">Friend Ranks</h4></div>
+  <div class="mcard p" onclick="alert('Challenges appear when friends challenge you!')"><span class="ico">⚔️</span><h4 style="font-size:11px">Challenges</h4></div>
+  <div class="mcard o" onclick="showHistory()"><span class="ico">🕐</span><h4 style="font-size:11px">Game History</h4></div>
+ </div>
+</div>
+
+<!-- MESSAGES LIST -->
+<div id="chats-screen" class="screen">
+ <div class="topbar"><div class="back" onclick="goHome()">←</div>
+  <div class="logo">Messages</div>
+  <div class="hchip" onclick="alert('Start a chat from a friend profile!')">✏️</div></div>
+ <div class="field">🔍<input placeholder="Search chats..."></div>
+ <div class="tabs">
+  <div class="tab on">All</div>
+  <div class="tab" onclick="alert('Only friend chats shown!')">Friends</div>
+  <div class="tab" onclick="alert('Group chats launch soon!')">Groups</div>
+  <div class="tab" onclick="alert('Message requests: none!')">Requests</div>
+ </div>
+ <div id="chat-list"><p class="muted">Add friends to start chatting!</p></div>
+</div>
+
+<!-- CHAT DETAIL -->
+<div id="chat-screen" class="screen">
+ <div class="topbar"><div class="back" onclick="showChats()">←</div>
+  <div style="display:flex;align-items:center;gap:10px;flex:1">
+   <div class="avatar" style="width:44px;height:44px;font-size:22px" id="c-avatar">♟<span class="online-dot"></span></div>
+   <div><h5 id="c-name">Friend</h5><p class="muted" id="c-status">Online</p></div>
+  </div>
+  <div class="hchip" onclick="alert('📞 Voice calls launch soon!')">📞</div></div>
+ <div class="card" id="chat-result-card" style="display:none;text-align:center"></div>
+ <div class="chat-box" id="chat-box" style="max-height:52vh"></div>
+ <div style="display:flex;gap:6px;margin:6px 0">
+  <span class="hchip" onclick="quickEmoji('👍')">👍</span><span class="hchip" onclick="quickEmoji('🔥')"></span><span class="hchip" onclick="quickEmoji('😄')">😄</span><span class="hchip" onclick="quickEmoji('⚔️')">⚔️</span><span class="hchip" onclick="quickEmoji('🏆')"></span>
+ </div>
+ <div class="field"><input id="chat-input" placeholder="Message..." onkeydown="if(event.key==='Enter')sendChat()"><button class="btn btn-grad btn-sm" onclick="sendChat()">➤</button></div>
+</div>
+<!-- PROFILE -->
+<div id="profile-screen" class="screen">
+ <div class="topbar"><div class="back" onclick="goHome()">←</div>
+  <div class="logo">Profile</div>
+  <div class="hchip" onclick="showSettings()">⚙️</div></div>
+ <div class="hero" style="display:flex;gap:14px;align-items:center">
+  <div class="ring"><div class="avatar lg" id="pr-avatar">♟<span class="online-dot"></span></div></div>
+  <div style="flex:1"><h2 id="pr-name">Player</h2>
+   <p class="muted">🇮 India • <span id="pr-title">Chess Explorer</span></p>
+   <p style="margin:4px 0">Think • Plan • Win 👑</p>
+   <span class="tag-gold">👑 Gold Member</span></div>
+  <div class="hchip" onclick="openEdit()">✏️</div>
+ </div>
+ <div class="grid g4">
+  <div class="stat"><b id="pr-rating">1200</b><span>Rating</span></div>
+  <div class="stat"><b id="pr-winrate">0%</b><span>Win Rate</span></div>
+  <div class="stat"><b id="pr-games">0</b><span>Games</span></div>
+  <div class="stat"><b id="pr-streak">0</b><span>Streak 🔥</span></div>
+ </div>
+ <div class="card" style="display:flex;align-items:center;gap:12px">
+  <div style="font-size:34px">🎖</div>
+  <div style="flex:1"><h5 id="pr-level">Level 1</h5><div class="bar"><i id="pr-xp" style="width:10%"></i></div><p class="muted" id="pr-xp-label">0 / 100 XP</p></div>
+ </div>
+ <div class="grid g4">
+  <div class="mcard g" onclick="showPlay()"><span class="ico">▶</span><h4 style="font-size:12px">Play</h4></div>
+  <div class="mcard p" onclick="showPuzzles()"><span class="ico">🧩</span><h4 style="font-size:12px">Puzzles</h4></div>
+  <div class="mcard b" onclick="showLearn()"><span class="ico">📖</span><h4 style="font-size:12px">Learn</h4></div>
+  <div class="mcard o" onclick="showPlay()"><span class="ico">⚔️</span><h4 style="font-size:12px">Battle</h4></div>
+ </div>
+ <div class="sec">🏆 Achievements <span class="link">View All →</span></div>
+ <div class="grid g4" id="pr-achieve">
+  <div class="mcard g"><span class="ico">👑</span><h4 style="font-size:10px">First Win</h4></div>
+  <div class="mcard b"><span class="ico">🧩</span><h4 style="font-size:10px">Puzzle Solver</h4></div>
+  <div class="mcard p"><span class="ico">🔥</span><h4 style="font-size:10px">3-Day Streak</h4></div>
+  <div class="mcard o"><span class="ico">⭐</span><h4 style="font-size:10px">10 Games</h4></div>
+ </div>
+ <div class="sec">📊 Recent Activity</div>
+ <div id="pr-activity"><p class="muted">Play games to see activity!</p></div>
+ <div class="sec">📈 Rating Trend</div>
+ <div class="card"><svg viewBox="0 0 200 60" width="100%" height="60"><polyline points="0,50 30,46 60,40 90,42 120,30 150,26 180,18 196,12" fill="none" stroke="#4ade80" stroke-width="3"/><circle cx="196" cy="12" r="4" fill="#4ade80"/></svg></div>
+ <div class="grid g2">
+  <div class="row" style="margin:0" onclick="openEdit()"><div class="ibox">✏️</div><div><h5>Edit Profile</h5></div></div>
+  <div class="row" style="margin:0" onclick="alert('Password change link sent to your email!')"><div class="ibox">🔒</div><div><h5>Change Password</h5></div></div>
+  <div class="row" style="margin:0" onclick="showHistory()"><div class="ibox">🕐</div><div><h5>Game History</h5></div></div>
+  <div class="row" style="margin:0" onclick="shareProfile()"><div class="ibox">📤</div><div><h5>Share Profile</h5></div></div>
+ </div>
+ <button class="btn btn-red" onclick="logout()">⎋ Logout</button>
+</div>
+
+<!-- SETTINGS -->
+<div id="settings-screen" class="screen">
+ <div class="topbar"><div class="back" onclick="goHome()">←</div>
+  <div class="logo">Settings</div>
+  <div class="hchip">🔍</div></div>
+ <div class="sec">Account</div>
+ <div class="row" onclick="openEdit()"><div class="ibox">👤</div><div style="flex:1"><h5>Edit Profile</h5><p>Update name, avatar and bio</p></div><span class="chev">›</span></div>
+ <div class="row"><div class="ibox">@</div><div style="flex:1"><h5>Username</h5><p id="set-user">—</p></div><span class="chev">›</span></div>
+ <div class="row"><div class="ibox">✉️</div><div style="flex:1"><h5>Email</h5><p id="set-email">—</p></div><span class="chev">›</span></div>
+ <div class="row" onclick="alert('Linked: Google ✅')"><div class="ibox">🔗</div><div style="flex:1"><h5>Linked Accounts</h5><p>Google, Apple, Facebook</p></div><span class="chev">›</span></div>
+ <div class="row"><div class="ibox">🛡</div><div style="flex:1"><h5>Account Status</h5></div><span class="tag-gold" style="color:#4ade80;background:rgba(74,222,128,.12)">Verified</span></div>
+ <div class="sec">Preferences</div>
+ <div class="row"><div class="ibox">⚔️</div><div style="flex:1"><h5>Challenge Mode</h5><p>Receive challenges from players</p></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+ <div class="row"><div class="ibox">👑</div><div style="flex:1"><h5>Auto Queen Promotion</h5></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+ <div class="row"><div class="ibox">💡</div><div style="flex:1"><h5>Show Legal Moves</h5></div><div class="toggle on" id="set-legal" onclick="toggleLegal(this)"></div></div>
+ <div class="row"><div class="ibox">🔊</div><div style="flex:1"><h5>Sound & Vibration</h5></div><div class="toggle on" id="set-sound" onclick="toggleSound(this)"></div></div>
+ <div class="row"><div class="ibox">⏱</div><div style="flex:1"><h5>Low Time Warning</h5></div><div class="hchip">10 sec</div></div>
+ <div class="sec">Board & Pieces</div>
+ <div class="row"><div class="ibox">🏁</div><div style="flex:1"><h5>Board Theme</h5><p id="set-board">Green Classic</p></div>
+  <div style="display:flex;gap:6px"><button class="btn btn-grad btn-sm" onclick="boardTheme('g')">Classic</button><button class="btn btn-dark btn-sm" onclick="boardTheme('w')">Wood</button></div></div>
+ <div class="row" onclick="alert('Piece themes launch soon!')"><div class="ibox">♟</div><div style="flex:1"><h5>Piece Theme</h5><p>Staunton</p></div><span class="chev">›</span></div>
+ <div class="sec">More</div>
+ <div class="row" onclick="alert('Cache cleared! 45.3 MB freed 🗑')"><div class="ibox">🗑</div><div style="flex:1"><h5>Clear Cache</h5><p>Delete temporary data</p></div><span class="muted">45.3 MB</span></div>
+ <div class="row" onclick="alert('⭐ Thanks! Rate us on Play Store after the APK launch!')"><div class="ibox">⭐</div><div style="flex:1"><h5>Rate Us</h5></div><span class="chev">›</span></div>
+ <div class="row" onclick="shareApp()"><div class="ibox">📤</div><div style="flex:1"><h5>Share App</h5><p>Invite friends to play chess</p></div><span class="chev">›</span></div>
+</div>
+<!-- MORE -->
+<div id="more-screen" class="screen">
+ <div class="topbar"><div><div class="logo">More</div><div class="subtitle">Explore more features and resources</div></div>
+  <div style="display:flex;gap:8px"><div class="hchip" onclick="alert('💎 Premium: unlimited puzzles, no ads, golden badge!')">👑</div><div class="hchip" onclick="showNotifications()">🔔<span class="dotb">3</span></div></div></div>
+ <div class="card" style="display:flex;gap:12px;align-items:center" onclick="showProfile()">
+  <div class="ring"><div class="avatar lg" id="m-avatar">♟<span class="online-dot"></span></div></div>
+  <div style="flex:1"><h4 id="m-name">Player</h4><span class="tag-gold">👑 Chess Explorer</span>
+   <div class="grid g3" style="margin-top:8px;gap:6px">
+    <div class="stat" style="padding:6px"><b id="m-rating" style="font-size:14px">1200</b><span>Rating</span></div>
+    <div class="stat" style="padding:6px"><b id="m-level" style="font-size:14px">Lv 1</b><span>Level</span></div>
+    <div class="stat" style="padding:6px"><b id="m-streak" style="font-size:14px">0</b><span>Streak</span></div>
+   </div></div><span class="chev">›</span>
+ </div>
+ <div class="card" style="display:flex;align-items:center;gap:12px;background:linear-gradient(120deg,#1a1206,#0d1310);border-color:#713f12">
+  <div style="font-size:34px">👑</div><div style="flex:1"><h5 style="color:var(--gold)">Upgrade to Premium</h5><p class="muted">Unlock all features and go pro</p></div>
+  <button class="btn btn-gold btn-sm" onclick="alert('💎 Premium launches with the Play Store version!')">Go Premium</button>
+ </div>
+ <div class="sec">Explore</div>
+ <div class="grid g2">
+  <div class="row" style="margin:0" onclick="alert('🏆 Tournaments launch next season!')"><div class="ibox">🏆</div><div><h5>Tournaments</h5><p>Join and compete</p></div></div>
+  <div class="row" style="margin:0" onclick="showLeaderboard()"><div class="ibox">📊</div><div><h5>Leaderboard</h5><p>Top players worldwide</p></div></div>
+  <div class="row" style="margin:0" onclick="showProfile()"><div class="ibox">📈</div><div><h5>Stats & Reports</h5><p>Insights about your games</p></div></div>
+  <div class="row" style="margin:0" onclick="showHistory()"><div class="ibox">🔍</div><div><h5>Game Review</h5><p>Review your games</p></div></div>
+  <div class="row" style="margin:0" onclick="startWatch()"><div class="ibox">📺</div><div><h5>Watch Live</h5><p>Spectate a live game</p></div></div>
+  <div class="row" style="margin:0" onclick="showLearn()"><div class="ibox">🎓</div><div><h5>Learn</h5><p>Lessons, tips, strategies</p></div></div>
+ </div>
+ <div class="sec">Tools</div>
+ <div class="grid g2">
+  <div class="row" style="margin:0" onclick="openBoardEditor()"><div class="ibox">✏️</div><div><h5>Board Editor</h5><p>Set up any position</p></div></div>
+  <div class="row" style="margin:0" onclick="analyzeGame()"><div class="ibox">🧠</div><div><h5>Engine Analysis</h5><p>Analyze with engine</p></div></div>
+  <div class="row" style="margin:0" onclick="startPuzzleRush()"><div class="ibox">⚡</div><div><h5>Puzzle Rush</h5><p>Solve against the clock</p></div></div>
+  <div class="row" style="margin:0" onclick="endgameTrainer()"><div class="ibox">♛</div><div><h5>Endgame Trainer</h5><p>Master the endgame</p></div></div>
+ </div>
+ <div class="sec">Account & More</div>
+ <div class="row" onclick="alert('💎 Subscription: free for now!')"><div class="ibox">👑</div><div style="flex:1"><h5>Subscription</h5></div><span class="chev">›</span></div>
+ <div class="row" onclick="alert('🎁 Refer & Earn: share your invite code and get +50 coins per friend!')"><div class="ibox">👥</div><div style="flex:1"><h5>Refer & Earn</h5></div><span class="chev">›</span></div>
+ <div class="row" onclick="alert('📧 support@chessmate.app — we reply within 24h!')"><div class="ibox">🎧</div><div style="flex:1"><h5>Help & Support</h5></div><span class="chev">›</span></div>
+ <div class="row" onclick="alert('Chessmate v2.0 — Think. Plan. Win. 👑')"><div class="ibox">ℹ️</div><div style="flex:1"><h5>About Chessmate</h5></div><span class="chev">›</span></div>
+</div>
+
+<!-- LEARN -->
+<div id="learn-screen" class="screen">
+ <div class="topbar"><div class="back" onclick="goHome()">←</div>
+  <div style="text-align:center"><div class="logo">🎓 Learn</div><div class="subtitle">Lessons, tips and strategies</div></div>
+  <div class="hchip">📖 Openings</div></div>
+ <div class="sec">Beginner Course</div>
+ <div class="row" onclick="openLesson(0)"><div class="ibox">♟</div><div style="flex:1"><h5>1. How the Pieces Move</h5><p>✅ Completed</p></div><span class="chev">›</span></div>
+ <div class="row" onclick="openLesson(1)"><div class="ibox"></div><div style="flex:1"><h5>2. Castling & Special Moves</h5><p>✅ Completed</p></div><span class="chev">›</span></div>
+ <div class="row" onclick="openLesson(2)"><div class="ibox">⚔️</div><div style="flex:1"><h5>3. Basic Checkmates</h5><p>▶ In progress</p></div><span class="chev">›</span></div>
+ <div class="row" onclick="openLesson(3)"><div class="ibox">🎯</div><div style="flex:1"><h5>4. Opening Principles</h5><p>🔒 Locked</p></div><span class="chev">›</span></div>
+ <div class="sec">Opening Library</div>
+ <div class="row" onclick="alert('Italian Game: 1.e4 e5 2.Nf3 Nc6 3.Bc4 — solid & attacking!')"><div class="ibox">🇮</div><div style="flex:1"><h5>Italian Game</h5><p>1.e4 e5 2.Nf3 Nc6 3.Bc4</p></div></div>
+ <div class="row" onclick="alert('Sicilian Defense: 1.e4 c5 — the sharpest reply!')"><div class="ibox">🇮</div><div style="flex:1"><h5>Sicilian Defense</h5><p>1.e4 c5</p></div></div>
+ <div class="row" onclick="alert('Ruy Lopez: 1.e4 e5 2.Nf3 Nc6 3.Bb5 — the classic!')"><div class="ibox">🇪</div><div style="flex:1"><h5>Ruy Lopez</h5><p>1.e4 e5 2.Nf3 Nc6 3.Bb5</p></div></div>
+ <div class="row" onclick="alert('Queens Gambit: 1.d4 d5 2.c4 — control the center!')"><div class="ibox">👑</div><div style="flex:1"><h5>Queen's Gambit</h5><p>1.d4 d5 2.c4</p></div></div>
+</div>
+
+<!-- HISTORY -->
+<div id="history-screen" class="screen">
+ <div class="topbar"><div class="back" onclick="goHome()">←</div>
+  <div style="text-align:center"><div class="logo">🕐 Game History</div><div class="subtitle">All your matches</div></div>
+  <div class="hchip">📊</div></div>
+ <div class="grid g3">
+  <div class="stat"><b id="h-wins" style="color:#4ade80">0</b><span>Wins</span></div>
+  <div class="stat"><b id="h-loss" style="color:var(--red)">0</b><span>Losses</span></div>
+  <div class="stat"><b id="h-draw" style="color:var(--gold)">0</b><span>Draws</span></div>
+ </div>
+ <div id="history-list"><p class="muted">No games yet — play your first match!</p></div>
+</div>
+
+<!-- NAV -->
+<div class="nav" id="main-nav" style="display:none">
+ <div class="nav-item active" id="nav-home" onclick="goHome()"><span class="ni">🏠</span>Home</div>
+ <div class="nav-item" id="nav-play" onclick="showPlay()"><span class="ni">⚔️</span>Play</div>
+ <div class="nav-item" id="nav-puzzles" onclick="showPuzzles()"><span class="ni">🧩</span>Puzzles</div>
+ <div class="nav-item" id="nav-friends" onclick="showFriends()"><span class="ni">👥</span>Friends</div>
+ <div class="nav-item" id="nav-more" onclick="showMore()"><span class="ni">⋯</span>More</div>
+</div>
+
+<!-- EDIT PROFILE MODAL -->
+<div class="modal" id="edit-modal"><div class="modal-card">
+ <h3>Edit Profile</h3>
+ <div class="field">👤<input id="edit-name" placeholder="Display name"></div>
+ <p class="muted" style="margin:6px 0">Pick your avatar:</p>
+ <div class="avatar-grid" id="avatar-grid"></div>
+ <button class="btn btn-grad" onclick="saveProfile()">💾 Save</button>
+ <button class="btn btn-dark" onclick="closeModal('edit-modal')">Cancel</button>
+</div></div>
+
+<!-- RESULT MODAL -->
+<div class="modal" id="result-modal"><div class="modal-card">
+ <div style="font-size:64px" id="res-emoji">🏆</div>
+ <h2 id="res-title">Victory!</h2>
+ <p class="muted" id="res-sub">by checkmate</p>
+ <p style="font-size:20px;font-weight:800;margin:10px 0" id="res-rating">+12 → 1212</p>
+ <button class="btn btn-grad" onclick="rematch()">⚔️ Rematch</button>
+ <button class="btn btn-dark" onclick="closeResult()">🏠 Home</button>
+</div></div>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig={apiKey:"AIzaSyD4N6COg8v60wsVuK2NDVp-vJsQM9D0GjU",authDomain:"chessmate-3340a.firebaseapp.com",databaseURL:"https://chessmate-3340a-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"chessmate-3340a",storageBucket:"chessmate-3340a.appspot.com",messagingSenderId:"79088859221",appId:"1:79088859221:web:3b361b77678375fca4bccd"};
+firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth(),db=firebase.database();
+let currentUser=null,userData=null,selected=null,myColor='w',vsBot=false,vsLocal=false,watchMode=false,oppUid=null,botLevel=0,aiColorPick='w',selectedMinutes=10,showLegal=true,soundOn=true,flipped=false,pickedAvatar='♟',game=null,lastMoveId=0,gameRecorded=false,pollTimer=null,clockTimer=null,timeMe=600,timeOpp=600;
+const PIECES={wK:'♔',wQ:'♕',wR:'♖',wB:'♗',wN:'♘',wP:'♙',bK:'♚',bQ:'♛',bR:'♜',bB:'♝',bN:'♞',bP:'♟'};
+const AVATARS=['♟','😀','😎','','👑','','🦊','','⚡','','💎','🌟'];
+function el(id){return document.getElementById(id)}
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));el(id).classList.add('active');
+ const navMap={'home-screen':'nav-home','play-screen':'nav-play','puzzles-screen':'nav-puzzles','friends-screen':'nav-friends','more-screen':'nav-more'};
+ document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+ if(navMap[id])el(navMap[id]).classList.add('active');
+ window.scrollTo(0,0);}
+function goHome(){showScreen('home-screen');renderHome();}
+function showPlay(){showScreen('play-screen')}
+function showPuzzles(){showScreen('puzzles-screen');renderPuzzleList('all')}
+function showFriends(){showScreen('friends-screen');loadFriends()}
+function showMore(){showScreen('more-screen')}
+function showSettings(){showScreen('settings-screen')}
+function showNotifications(){showScreen('notif-screen');renderNotifs()}
+function showLeaderboard(){showScreen('lb-screen')}
+function showHistory(){showScreen('history-screen');loadHistory()}
+function showChats(){showScreen('chats-screen');loadChats()}
+function showProfile(){showScreen('profile-screen');updateProfileUI()}
+function showAI(){showScreen('ai-screen')}
+function showLearn(){showScreen('learn-screen')}
+function switchTab(t){el('tab-login').classList.toggle('on',t==='login');el('tab-signup').classList.toggle('on',t==='signup');el('login-form').style.display=t==='login'?'block':'none';el('signup-form').style.display=t==='signup'?'block':'none';}
+function peek(e,id){const i=el(id);i.type=i.type==='password'?'text':'password';}
+function login(){auth.signInWithEmailAndPassword(el('auth-email').value,el('auth-password').value).catch(e=>alert(e.message));}
+function signup(){const n=el('signup-name').value,e=el('signup-email').value,u=el('signup-username').value,p=el('signup-password').value;
+ if(p.length<8)return alert('Password must be 8+ characters!');
+ if(!u)return alert('Choose a username!');
+ auth.createUserWithEmailAndPassword(e,p).then(c=>db.ref('users/'+c.user.uid).set({username:u,name:n||u,email:e,rating:1200,wins:0,losses:0,draws:0,streak:0,avatar:pickedAvatar,createdAt:Date.now(),lastOnline:Date.now()})).catch(e=>alert(e.message));}
+function googleLogin(){auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());}
+function guestLogin(){auth.signInAnonymously().catch(e=>alert(e.message));}
+function logout(){auth.signOut();}
+auth.onAuthStateChanged(user=>{
+ if(user){currentUser=user;db.ref('users/'+user.uid).on('value',snap=>{
+  userData=snap.val();
+  if(!userData){db.ref('users/'+user.uid).set({username:'Player'+Math.floor(Math.random()*1000),name:'Player',email:user.email||'guest@chessmate.app',rating:1200,wins:0,losses:0,draws:0,streak:0,avatar:'♟',createdAt:Date.now(),lastOnline:Date.now()});return;}
+  el('main-nav').style.display='flex';showScreen('home-screen');renderHome();updateUI();});}
+ else{currentUser=null;userData=null;el('main-nav').style.display='none';showScreen('auth-screen');}});
+function updateUI(){if(!userData)return;const u=userData;
+ const t=(u.wins||0)+(u.losses||0)+(u.draws||0);const wr=t?Math.round((u.wins||0)/t*100):0;
+ const set=(id,v)=>{if(el(id))el(id).textContent=v};
+ set('h-name',u.username);set('h-rating',u.rating);set('h-welcome',(u.username||'PLAYER')+'!');set('h-rating2',u.rating);set('h-winrate',wr+'%');set('h-games',t);
+ if(el('h-avatar'))el('h-avatar').firstChild.textContent=u.avatar||'♟';
+ set('p-rating',u.rating);set('p-rating2',u.rating);set('l-rating',u.rating);set('a-rating',u.rating);
+ set('l-games',t);set('l-win',wr+'%');
+ set('pr-name',u.username);set('pr-rating',u.rating);set('pr-winrate',wr+'%');set('pr-games',t);set('pr-streak',u.streak||0);
+ const lvl=Math.floor((u.rating||1200)/100)+1;set('pr-level','Level '+lvl);set('pr-xp-label',((u.rating||0)%100)+' / 100 XP');if(el('pr-xp'))el('pr-xp').style.width=((u.rating||0)%100)+'%';
+ set('m-name',u.username);set('m-rating',u.rating);set('m-level','Lv '+lvl);set('m-streak',u.streak||0);
+ if(el('m-avatar'))el('m-avatar').firstChild.textContent=u.avatar||'♟';
+ if(el('pr-avatar'))el('pr-avatar').firstChild.textContent=u.avatar||'♟';
+ if(el('f-avatar'))el('f-avatar').firstChild.textContent=u.avatar||'♟';
+ set('f-name',u.username);set('f-rating',u.rating);
+ set('set-user',u.username);set('set-email',u.email||'guest');
+ set('lb-name',u.username);set('lb-rating',u.rating);set('lb-best',u.rating);
+ set('h-wins',u.wins||0);set('h-loss',u.losses||0);set('h-draw',u.draws||0);
+ set('pz-streak',u.streak||0);set('pz-solved',u.puzzles||0);}
+ <script>
+let currentCode='',chatRef=null,currentChatUid=null;
+function renderHome(){if(!userData)return;
+ el('home-lb').innerHTML='<div class="row" style="margin:4px 0;padding:8px"><span>🥇</span><b style="margin-left:6px">MagnusMax</b><span class="chev" style="color:var(--gold)">2450</span></div><div class="row" style="margin:4px 0;padding:8px"><span>🥈</span><b style="margin-left:6px">KnightRider</b><span class="chev" style="color:var(--gold)">2387</span></div><div class="row" style="margin:4px 0;padding:8px;border:1px solid var(--green)"><span>23</span><b style="margin-left:6px;color:var(--green)">'+(userData.username||'You')+'</b><span class="chev" style="color:var(--gold)">'+(userData.rating||1200)+'</span></div>';
+ db.ref('users/'+currentUser.uid+'/friends').once('value').then(fs=>{
+  const keys=Object.keys(fs.val()||{});const box=el('home-friends');
+  if(!keys.length){box.innerHTML='<p class="muted">Add friends to play!</p>';return;}
+  box.innerHTML='';let n=0;
+  keys.slice(0,3).forEach(k=>{db.ref('users/'+k).once('value').then(s=>{const u=s.val();if(!u||n>2)return;n++;
+   box.innerHTML+='<div class="row" style="margin:4px 0;padding:8px" onclick="challengeUser(\''+k+'\',\''+u.username+'\')"><div class="avatar" style="width:34px;height:34px;font-size:18px">'+(u.avatar||'♟')+'<span class="'+((u.lastOnline||0)>Date.now()-300000?'online-dot':'offline-dot')+'"></span></div><div style="flex:1"><h5 style="font-size:12px">'+u.username+'</h5></div><span class="muted">⚔️</span></div>';});});});
+ loadHistory();}
+function updateProfileUI(){updateUI();loadHistory();}
+function loadHistory(){if(!currentUser)return;db.ref('users/'+currentUser.uid+'/history').limitToLast(10).once('value').then(s=>{
+ const arr=Object.values(s.val()||{}).reverse();
+ const row=g=>'<div class="row"><div class="ibox">'+(g.res==='win'?'🏆':g.res==='loss'?'💔':'')+'</div><div style="flex:1"><h5>vs '+g.opp+'</h5><p>'+(g.mode||'')+'</p></div><span class="'+(g.res==='win'?'result-win':g.res==='loss'?'result-loss':'result-draw')+'">'+(g.res==='win'?'+':'-')+(g.d||8)+'</span></div>';
+ if(el('history-list'))el('history-list').innerHTML=arr.length?arr.map(row).join(''):'<p class="muted">No games yet — play your first match!</p>';
+ if(el('play-recent'))el('play-recent').innerHTML=arr.slice(0,3).map(row).join('');
+ if(el('home-recent'))el('home-recent').innerHTML=arr.length?arr.slice(0,3).map(row).join(''):'<p class="muted">No games yet</p>';
+ if(el('pr-activity'))el('pr-activity').innerHTML=arr.length?arr.slice(0,4).map(g=>'<div class="row" style="margin:4px 0;padding:8px"><div class="ibox" style="width:32px;height:32px;font-size:14px">'+(g.res==='win'?'⚡':'💔')+'</div><div style="flex:1"><h5 style="font-size:12px">'+(g.res==='win'?'Won':g.res==='loss'?'Lost':'Drew')+' vs '+g.opp+'</h5></div></div>').join(''):'<p class="muted">Play games to see activity!</p>';});}
+function loadFriends(){if(!currentUser)return;const uid=currentUser.uid;
+ db.ref('friendRequests/'+uid).on('value',s=>{const ks=Object.keys(s.val()||{});
+  el('f-req-badge').textContent=ks.length;
+  el('f-requests').innerHTML=ks.length?'':'<p class="muted">No pending requests</p>';
+  el('notif-priority').innerHTML=ks.length?'':'<p class="muted">No urgent notifications</p>';
+  ks.forEach(k=>{db.ref('users/'+k).once('value').then(us=>{const u=us.val();if(!u)return;
+   el('f-requests').innerHTML+='<div class="row"><div class="avatar" style="width:40px;height:40px;font-size:20px">'+(u.avatar||'♟')+'</div><div style="flex:1"><h5>'+u.username+'</h5><p class="muted">wants to be your friend</p></div><button class="btn btn-dark btn-sm" onclick="declineFriend(\''+k+'\')">Decline</button><button class="btn btn-grad btn-sm" onclick="acceptFriend(\''+k+'\')">Accept</button></div>';
+   el('notif-priority').innerHTML+='<div class="row"><div class="ibox">👥</div><div style="flex:1"><h5>'+u.username+' sent a friend request</h5></div><button class="btn btn-grad btn-sm" onclick="acceptFriend(\''+k+'\')">Accept</button></div>';});});});
+ db.ref('users/'+uid+'/friends').on('value',s=>{const ks=Object.keys(s.val()||{});
+  el('f-count').textContent=ks.length;
+  el('f-list').innerHTML=ks.length?'':'<p class="muted">Add friends to play together!</p>';
+  el('f-online-row').innerHTML='<div style="text-align:center;cursor:pointer" onclick="addFriendPrompt()"><div class="avatar" style="border:1px dashed var(--muted)">+</div><p class="muted" style="font-size:10px">Add</p></div>';
+  let online=0;
+  ks.forEach(k=>{db.ref('users/'+k).once('value').then(us=>{const u=us.val();if(!u)return;
+   const on=(u.lastOnline||0)>Date.now()-300000;if(on)online++;el('f-online').textContent=online;
+   el('f-list').innerHTML+='<div class="row"><div class="avatar" style="width:40px;height:40px;font-size:20px">'+(u.avatar||'♟')+'<span class="'+(on?'online-dot':'offline-dot')+'"></span></div><div style="flex:1"><h5>'+u.username+'</h5><p class="muted">'+(on?'🟢 Online':'⚫ Offline')+' • 🏆 '+(u.rating||1200)+'</p></div><button class="btn btn-dark btn-sm" onclick="startChatWith(\''+k+'\')">💬</button><button class="btn btn-grad btn-sm" onclick="challengeUser(\''+k+'\',\''+u.username+'\')">⚔️</button></div>';
+   if(on)el('f-online-row').innerHTML+='<div style="text-align:center;cursor:pointer" onclick="challengeUser(\''+k+'\',\''+u.username+'\')"><div class="avatar" style="width:52px;height:52px;font-size:26px">'+(u.avatar||'♟')+'<span class="online-dot"></span></div><p style="font-size:10px;margin-top:2px">'+u.username+'</p><p style="font-size:9px;color:var(--gold)">🏆 '+(u.rating||1200)+'</p></div>';});});});}
+function addFriendPrompt(){const un=(el('friend-search').value||'').trim();if(!un)return alert('Type a username first!');
+ db.ref('users').orderByChild('username').equalTo(un).once('value').then(s=>{const v=s.val();
+  if(!v)return alert('User "'+un+'" not found!');
+  const uid=Object.keys(v)[0];if(uid===currentUser.uid)return alert("That's you! 😄");
+  db.ref('friendRequests/'+uid+'/'+currentUser.uid).set(true).then(()=>alert('✅ Friend request sent to '+un+'!'));});}
+function focusFriendSearch(){el('friend-search').focus()}
+function acceptFriend(k){const uid=currentUser.uid;
+ db.ref('users/'+uid+'/friends/'+k).set(true);db.ref('users/'+k+'/friends/'+uid).set(true);
+ db.ref('friendRequests/'+uid+'/'+k).remove();alert('🎉 You are now friends!');}
+function declineFriend(k){db.ref('friendRequests/'+currentUser.uid+'/'+k).remove();}
+function startChatWith(uid){currentChatUid=uid;db.ref('users/'+uid).once('value').then(s=>{const u=s.val();
+ el('c-name').textContent=u.username;el('c-avatar').firstChild.textContent=u.avatar||'♟';
+ el('c-status').textContent=(u.lastOnline||0)>Date.now()-300000?'Online':'Offline';
+ showScreen('chat-screen');listenChat();});}
+function chatId(){return [currentUser.uid,currentChatUid].sort().join('_')}
+function listenChat(){if(chatRef)chatRef.off();el('chat-box').innerHTML='';
+ chatRef=db.ref('chats/'+chatId()+'/messages');
+ chatRef.limitToLast(50).on('child_added',s=>{const m=s.val();const me=m.from===currentUser.uid;
+  const box=el('chat-box');
+  box.innerHTML+='<div class="msg '+(me?'me':'other')+'">'+m.text+'<span class="time">'+new Date(m.t).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+(me?' ✓✓':'')+'</span></div>';
+  box.scrollTop=box.scrollHeight;});}
+function sendChat(){const t=el('chat-input').value.trim();if(!t)return;
+ db.ref('chats/'+chatId()+'/messages').push({from:currentUser.uid,text:t,t:Date.now()});
+ el('chat-input').value='';}
+function quickEmoji(e){el('chat-input').value+=e;sendChat();}
+function loadChats(){db.ref('users/'+currentUser.uid+'/friends').once('value').then(s=>{const ks=Object.keys(s.val()||{});
+ el('chat-list').innerHTML=ks.length?'':'<p class="muted">Add friends to start chatting!</p>';
+ ks.forEach(k=>{db.ref('users/'+k).once('value').then(us=>{const u=us.val();if(!u)return;
+  el('chat-list').innerHTML+='<div class="row" onclick="startChatWith(\''+k+'\')"><div class="avatar" style="width:46px;height:46px;font-size:24px">'+(u.avatar||'♟')+'<span class="'+((u.lastOnline||0)>Date.now()-300000?'online-dot':'offline-dot')+'"></span></div><div style="flex:1"><h5>'+u.username+'</h5><p class="muted">Tap to chat 💬</p></div><span class="chev">›</span></div>';});});});}
+function renderNotifs(){loadFriends();}
+function markAllRead(){alert('✅ All notifications marked as read!')}
+function openEdit(){el('edit-name').value=userData.username||'';const g=el('avatar-grid');g.innerHTML='';
+ AVATARS.forEach(a=>{g.innerHTML+='<div class="avatar-opt'+(a===(userData.avatar||'♟')?' picked':'')+'" onclick="pickAvatar(\''+a+'\',this)">'+a+'</div>';});
+ pickedAvatar=userData.avatar||'♟';el('edit-modal').classList.add('open');}
+function pickAvatar(a,e){pickedAvatar=a;document.querySelectorAll('.avatar-opt').forEach(x=>x.classList.remove('picked'));e.classList.add('picked');}
+function saveProfile(){db.ref('users/'+currentUser.uid).update({username:el('edit-name').value||userData.username,avatar:pickedAvatar});closeModal('edit-modal');alert('✅ Profile saved!');}
+function closeModal(id){el(id).classList.remove('open')}
+function shareApp(){const url='https://openheartjeetu-dot.github.io/chessmate/';if(navigator.share)navigator.share({title:'Chessmate',text:'Play chess with me on Chessmate! 👑',url});else prompt('Copy this link & share:',url);}
+function shareProfile(){shareApp()}
+function shareWhatsApp(){window.open('https://wa.me/?text='+encodeURIComponent('♟ Join my Chessmate game! Room code: '+currentCode+' → https://openheartjeetu-dot.github.io/chessmate/?game='+currentCode));}
+</script>
+<script>
+let matchTimer=null,joinPoll=null,watchTimer=null,editorMode=false,botNames=['Bot Sam 🤖','Bot Alex 🤖','Bot Magnus 🤖','Bot Stockfish 🤖'];
+function renderBoard(target,g,interactive){const b=el(target);b.innerHTML='';const pos=g.board();
+ for(let d=0;d<64;d++){const dr=Math.floor(d/8),dc=d%8;const rr=flipped?7-dr:dr,cc=flipped?7-dc:dc;
+  const p=pos[rr][cc];const sq=document.createElement('div');
+  sq.className='sq '+(((rr+cc)%2===0)?'gl':'gd');
+  if(dc===0){const co=document.createElement('span');co.className='coord r';co.textContent=8-rr;sq.appendChild(co);}
+  if(dr===7){const co=document.createElement('span');co.className='coord f';co.textContent='abcdefgh'[cc];sq.appendChild(co);}
+  if(selected&&selected[0]===rr&&selected[1]===cc)sq.classList.add('sel');
+  if(p){const sp=document.createElement('span');sp.className=p.color==='w'?'piece-w':'piece-b';sp.style.fontSize='min(9vw,40px)';sp.textContent=PIECES[(p.color==='w'?'w':'b')+p.type.toUpperCase()];sq.appendChild(sp);}
+  if(interactive)sq.onclick=()=>tapSquare(rr,cc);
+  b.appendChild(sq);}}
+function tapSquare(r,c){if(!game||watchMode||editorMode)return;
+ const p=game.board()[r][c];const turn=game.turn();
+ const canMove=(vsBot||vsLocal)?true:turn===myColor;
+ if(vsBot&&turn!==myColor&&!vsLocal)return;
+ if(selected){const mv=game.move({from:{square:selected[1]+''+(8-selected[0])&&null||null,to:null}||{}});game.undo();}
+ if(selected){const from=sqName(selected),to=sqName([r,c]);
+  const mv=game.move({from:from,to:to,promotion:'q'});
+  if(mv){selected=null;afterMove(mv,true);return;} }
+ if(p&&p.color===turn&&canMove){selected=[r,c];renderBoard('board',game,true);
+  if(showLegal){const ms=game.moves({square:sqName([r,c]),verbose:true});ms.forEach(m=>{const idx=(8-m.to[1])*8+'abcdefgh'.indexOf(m.to[0]);const b=el('board');if(b.children[idx])b.children[idx].classList.add('hint');});}
+ } else selected=null,renderBoard('board',game,true);}
+function sqName(rc){return 'abcdefgh'[rc[1]]+(8-rc[0]);}
+function afterMove(m,push){renderBoard('board',game,true);renderCaps();renderMoves();
+ if(soundOn)beep();
+ const st=el('g-status');
+ if(game.in_checkmate()){endGame(game.turn()===(vsBot?myColor:(myColor)) ? 'loss':'win','checkmate');return;}
+ if(game.in_draw()){endGame('draw','draw');return;}
+ st.textContent=(game.turn()==='w'?'White':'Black')+"'s turn"+(game.in_check()?' — CHECK!':'');
+ el('g-turn').textContent=game.turn()==='w'?'White':'Black';
+ updateClockTurn();
+ if(vsBot&&!game.game_over()&&game.turn()!==myColor)setTimeout(botMove,500);
+ if(vsLocal&&!game.game_over()){}
+ if(push&&currentCode&&!vsBot&&!vsLocal)db.ref('games/'+currentCode+'/moves').push({from:m.from,to:m.to,promo:'q',by:currentUser.uid});}
+function renderCaps(){if(!game)return;const h=game.history({verbose:true});let cw='',cb='';
+ h.forEach(m=>{if(m.captured){const pc=PIECES[(m.color==='w'?'b':'w')+m.captured.toUpperCase()];if(m.color==='w')cw+=pc;else cb+=pc;}});
+ el('cap-me').textContent=cw;el('cap-opp').textContent=cb;}
+function renderMoves(){const h=game.history();let html='';for(let i=0;i<h.length;i+=2){html+='<div style="display:flex;gap:10px;padding:3px 6px;border-bottom:1px solid var(--border)"><span class="muted">'+(i/2+1)+'.</span><b style="flex:1">'+h[i]+'</b><b style="flex:1">'+(h[i+1]||'')+'</b></div>';}el('move-list').innerHTML=html||'<p class="muted">No moves yet</p>';el('move-list').scrollTop=9999;}
+function evalBoard(g){const val={p:1,n:3,b:3,r:5,q:9,k:0};let s=0;g.board().forEach(row=>row.forEach(p=>{if(p)s+=(p.color==='w'?1:-1)*val[p.type];}));return s;}
+function chooseBotMove(g,lvl){const moves=g.moves({verbose:true});if(!moves.length)return null;
+ if(lvl===0)return moves[Math.floor(Math.random()*moves.length)];
+ const sign=g.turn()==='w'?1:-1;let best=null,bestSc=-1e9;
+ for(const m of moves){let sc;g.move(m);
+  if(g.in_checkmate())sc=99999;
+  else if(lvl===1)sc=sign*evalBoard(g)+Math.random();
+  else if(lvl===2)sc=sign*evalBoard(g)+(g.in_check()?4:0)+(m.captured?2:0);
+  else{let worst=1e9;const reps=g.moves({verbose:true}).slice(0,25);
+   if(!reps.length)worst=sign*evalBoard(g);
+   for(const r of reps){g.move(r);const v=sign*evalBoard(g);if(v<worst)worst=v;g.undo();}   sc=worst;}
+  g.undo();if(sc>bestSc){bestSc=sc;best=m;}}
+ return best||moves[0];}
+function botMove(){if(!game||game.game_over())return;const m=chooseBotMove(game,botLevel);if(m){game.move(m);afterMove(m,false);}}
+function startGameUI(name,rating){game=new Chess();selected=null;gameRecorded=false;lastMoveId=0;
+ timeMe=selectedMinutes*60;timeOpp=selectedMinutes*60;
+ el('g-opp-name').textContent=name;el('g-opp-rating').textContent=rating||1200;
+ el('g-me-name').textContent=userData.username||'You';el('g-me-rating').textContent=userData.rating||1200;
+ el('g-me-avatar').firstChild.textContent=userData.avatar||'♟';
+ el('g-opp-avatar').firstChild.textContent=vsBot?'🤖':'';
+ el('g-id').textContent='#'+(currentCode||'BOT');
+ el('g-mode-label').textContent=vsBot?'● vs AI':vsLocal?'● Local':watchMode?'● Spectating':'● Online';
+ el('g-info-mode').textContent=(selectedMinutes>=30?'Classic ':selectedMinutes>=10?'Rapid ':selectedMinutes>=3?'Blitz ':'Bullet ')+selectedMinutes+'m';
+ el('mtab-chat').style.display=(vsBot||vsLocal||watchMode)?'none':'';
+ flipped=myColor==='b';
+ showScreen('game-screen');renderBoard('board',game,true);renderCaps();renderMoves();
+ el('g-status').textContent="White's turn";startClock();
+ if(vsBot&&myColor==='b')setTimeout(botMove,600);}
+function startClock(){if(clockTimer)clearInterval(clockTimer);
+ clockTimer=setInterval(()=>{if(!game||game.game_over())return;
+  if(watchMode)return;
+  if(game.turn()==='w')timeMe-=(myColor==='w'||vsLocal||watchMode)?1:0,timeOpp-=(myColor==='b'&&!vsLocal)?1:0;
+  else timeOpp-=(myColor==='b'||vsLocal)?1:0,timeMe-=(myColor==='w'&&!vsLocal)?1:0;
+  if(vsLocal){if(game.turn()==='w')timeMe--;else timeOpp--;}
+  paintClocks();
+  if(timeMe<=0)endGame('loss','time out');if(timeOpp<=0)endGame('win','time out');},1000);}
+function paintClocks(){const f=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+ el('clk-me').textContent=f(Math.max(0,timeMe));el('clk-opp').textContent=f(Math.max(0,timeOpp));
+ el('clk-me').className='clock'+(game&&game.turn()===myColor?' on':'')+(timeMe<30?' low':'');
+ el('clk-opp').className='clock'+(game&&game.turn()!==myColor?' on':'')+(timeOpp<30?' low':'');}
+function updateClockTurn(){paintClocks();}
+function selectBot(i,e){botLevel=i;document.querySelectorAll('#bot-cards .mcard').forEach(x=>x.style.border='1px solid var(--border)');e.style.border='1px solid var(--green)';el('ai-slider').value=[800,1200,1600,2000][i];el('ai-val').textContent=[800,1200,1600,2000][i];}
+function pickColor(c){aiColorPick=c;myColor=c;el('col-w').className='btn btn-sm '+(c==='w'?'btn-grad':'btn-dark');el('col-b').className='btn btn-sm '+(c==='b'?'btn-grad':'btn-dark');}
+function startBotGame(){vsBot=true;vsLocal=false;watchMode=false;currentCode='';startGameUI(botNames[botLevel],[800,1200,1600,2000][botLevel]);}
+function challengeBot(r){vsBot=true;vsLocal=false;botLevel=2;selectedMinutes=10;startGameUI('Bot Magnus 🤖',r);}
+function playLocal(){vsLocal=true;vsBot=false;watchMode=false;myColor='w';startGameUI('Local Friend 👥',userData?userData.rating:1200);}
+function quickTime(m){selectedMinutes=m;findMatch();}
+function selectTime(m,e){selectedMinutes=m;const p=e.parentElement;p.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));e.classList.add('on');}
+function boardTheme(t){document.body.classList.toggle('wood',t==='w');if(el('set-board'))el('set-board').textContent=t==='w'?'Wood Classic':'Green Classic';if(game)renderBoard('board',game,true);}
+function toggleSound(t){soundOn=!soundOn;t.classList.toggle('on',soundOn);}
+function toggleLegal(t){showLegal=!showLegal;t.classList.toggle('on',showLegal);}
+function toggleSoundRow(r){const t=r.querySelector('.toggle');t.classList.toggle('on');soundOn=t.classList.contains('on');}
+function showLegalToggle(r){const t=r.querySelector('.toggle');t.classList.toggle('on');showLegal=t.classList.contains('on');}
+function flipBoardView(){flipped=!flipped;if(game)renderBoard('board',game,true);}
+function openMoreSheet(){el('more-sheet').classList.add('open')}
+function closeMoreSheet(){el('more-sheet').classList.remove('open')}
+function gameTab(t){el('move-list').style.display=t==='moves'?'block':'none';el('gchat-panel').style.display=t==='chat'?'block':'none';el('mtab-moves').classList.toggle('on',t==='moves');el('mtab-chat').classList.toggle('on',t==='chat');}
+function toggleGameChat(){gameTab('chat')}
+function sendGameChat(){const t=el('gchat-input').value.trim();if(!t||!currentCode)return;db.ref('games/'+currentCode+'/chat').push({from:currentUser.uid,text:t,t:Date.now()});el('gchat-input').value='';}
+function beep(){try{const a=new (window.AudioContext||window.webkitAudioContext)();const o=a.createOscillator();const g=a.createGain();o.connect(g);g.connect(a.destination);o.frequency.value=520;g.gain.value=0.08;o.start();setTimeout(()=>o.stop(),90);}catch(e){}}function resignGame(){if(!game)return;if(confirm('Resign this game?'))endGame('loss','resignation');}
+function abortGame(){if(confirm('Abort game? (not counted)')){stopAll();goHome();}}
+function offerDraw(){if(vsBot){alert('🤖 Bot accepts the draw!');endGame('draw','agreement');}else alert('🤝 Draw offer sent!');}
+function undoMove(){if(!game)return;if(!vsBot&&!vsLocal)return alert('Undo not available in online games');if(vsBot){game.undo();game.undo();}else game.undo();selected=null;renderBoard('board',game,true);renderCaps();renderMoves();}
+function redoMove(){alert('↪ Redo available in Game Review (Premium)!')}
+function confirmExit(){if(watchMode){stopAll();goHome();return;}if(game&&!game.game_over()){if(confirm('Leave game? You will lose.'))endGame('loss','abandon');}else goHome();}
+function stopAll(){if(clockTimer)clearInterval(clockTimer);if(pollTimer){pollTimer.off();pollTimer=null;}if(matchTimer)clearInterval(matchTimer);if(joinPoll)clearInterval(joinPoll);if(watchTimer)clearInterval(watchTimer);watchMode=false;}
+function endGame(res,reason){if(gameRecorded)return;gameRecorded=true;stopAll();
+ const d=res==='win'?12:res==='loss'?-8:2;
+ const opp=el('g-opp-name').textContent;
+ if(userData&&currentUser){const u=userData;
+  const upd={rating:Math.max(400,(u.rating||1200)+d)};
+  if(res==='win')upd.wins=(u.wins||0)+1;if(res==='loss')upd.losses=(u.losses||0)+1;if(res==='draw')upd.draws=(u.draws||0)+1;
+  upd.streak=res==='win'?(u.streak||0)+1:0;
+  db.ref('users/'+currentUser.uid).update(upd);
+  db.ref('users/'+currentUser.uid+'/history').push({opp:opp,res:res,d:Math.abs(d),mode:el('g-info-mode').textContent,t:Date.now()});}
+ el('res-emoji').textContent=res==='win'?'🏆':res==='loss'?'💔':'🤝';
+ el('res-title').textContent=res==='win'?'Victory!':res==='loss'?'Defeat':'Draw';
+ el('res-sub').textContent='by '+reason;
+ el('res-rating').textContent=(d>=0?'+':'')+d+' → '+Math.max(400,(userData?userData.rating:1200)+d);
+ el('result-modal').classList.add('open');}
+function closeResult(){el('result-modal').classList.remove('open');game=null;goHome();}
+function rematch(){el('result-modal').classList.remove('open');if(vsBot)startBotGame();else goHome();}
+function analyzeGame(){if(!game||!game.history().length)return alert('Play a game first!');
+ const h=game.history({verbose:true});let caps=0,checks=0;h.forEach(m=>{if(m.captured)caps++;if(m.san.includes('+'))checks++;});
+ const acc=Math.min(99,70+caps+checks);
+ alert('🔍 ENGINE ANALYSIS\n\nAccuracy: '+acc+'%\nCaptures: '+caps+'\nChecks: '+checks+'\nBrilliant: '+(checks>0?1:0)+' ⚡\nMistakes: '+(3-Math.min(3,caps))+'\n\nFull move-by-move analysis in Premium! 💎');}
+ <script>
+function tapSquare(r,c){if(!game||watchMode)return;
+ if(editorMode){editorTap(r,c);return;}
+ const p=game.board()[r][c];const turn=game.turn();
+ if(vsBot&&turn!==myColor)return;
+ if(selected){const from=sqName(selected),to=sqName([r,c]);
+  if(from===to){selected=null;renderBoard('board',game,true);return;}
+  const mv=game.move({from:from,to:to,promotion:'q'});
+  if(mv){selected=null;afterMove(mv,true);return;}}
+ if(p&&p.color===turn){selected=[r,c];renderBoard('board',game,true);
+  if(showLegal){const b=el('board');game.moves({square:sqName([r,c]),verbose:true}).forEach(m=>{
+   const tr=8-parseInt(m.to[1]),tc='abcdefgh'.indexOf(m.to[0]);
+   const dr=flipped?7-tr:tr,dc=flipped?7-tc:tc;
+   if(b.children[dr*8+dc])b.children[dr*8+dc].classList.add('hint');});}}
+ else{selected=null;renderBoard('board',game,true);}}
+function startClock(){if(clockTimer)clearInterval(clockTimer);
+ clockTimer=setInterval(()=>{if(!game||game.game_over()||watchMode)return;
+  const t=game.turn();
+  if(vsLocal){if(t==='w')timeMe--;else timeOpp--;}
+  else{if(t===myColor)timeMe--;else timeOpp--;}
+  paintClocks();
+  if(timeMe<=0)endGame('loss','time out');
+  else if(timeOpp<=0)endGame('win','time out');},1000);}
+function genCode(){const s='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let c='';for(let i=0;i<6;i++)c+=s[Math.floor(Math.random()*s.length)];return c;}
+function createGame(){vsBot=false;vsLocal=false;currentCode=genCode();showScreen('lobby-screen');
+ el('game-code').style.display='block';el('game-code').textContent=currentCode;
+ el('share-wa').style.display='flex';el('lobby-title').textContent='Game Lobby';
+ el('lobby-sub').textContent='Share this code with your opponent';
+ el('lobby-note').textContent='Waiting for opponent…';el('lobby-timer').textContent='';
+ db.ref('games/'+currentCode).set({host:currentUser.uid,status:'waiting',created:Date.now(),minutes:selectedMinutes});
+ joinPoll=setInterval(()=>{db.ref('games/'+currentCode).once('value').then(s=>{const g=s.val();
+  if(g&&g.status==='playing'){clearInterval(joinPoll);startOnlineGame(currentCode);}});},1500);}
+function joinGame(code){db.ref('games/'+code).once('value').then(s=>{const g=s.val();
+ if(!g)return alert('Room not found! Check the code.');
+ if(g.status!=='waiting')return alert('This game already started!');
+ db.ref('games/'+code).update({status:'playing',guest:currentUser.uid});
+ currentCode=code;startOnlineGame(code);} );}
+function joinFromInput(){const c=(el('join-code-input').value||'').trim().toUpperCase();if(c)joinGame(c);}
+function findMatch(){vsBot=false;vsLocal=false;showScreen('lobby-screen');
+ el('game-code').style.display='none';el('share-wa').style.display='none';
+ el('lobby-title').textContent='Finding Opponent...';
+ const r=userData?userData.rating:1200;
+ el('lobby-sub').textContent='Looking for players near your rating ('+(r-200)+'–'+(r+200)+')';
+ let sec=0;el('lobby-timer').textContent='00:00';
+ matchTimer=setInterval(()=>{sec++;el('lobby-timer').textContent='00:'+String(sec).padStart(2,'0');},1000);
+ db.ref('games').once('value').then(s=>{const gs=s.val()||{};
+  const open=Object.keys(gs).find(k=>gs[k].status==='waiting'&&gs[k].host!==currentUser.uid&&(Date.now()-(gs[k].created||0))<120000);
+  if(open){clearInterval(matchTimer);joinGame(open);}
+  else{currentCode=genCode();
+   db.ref('games/'+currentCode).set({host:currentUser.uid,status:'waiting',created:Date.now(),minutes:selectedMinutes});   joinPoll=setInterval(()=>{db.ref('games/'+currentCode).once('value').then(s2=>{const g=s2.val();
+    if(g&&g.status==='playing'){clearInterval(joinPoll);clearInterval(matchTimer);startOnlineGame(currentCode);}});},1500);
+   setTimeout(()=>{if(!game&&joinPoll){clearInterval(joinPoll);clearInterval(matchTimer);db.ref('games/'+currentCode).remove();
+    el('lobby-title').textContent='Opponent found! 🤖';el('lobby-sub').textContent='Bot Alex joined the match';
+    setTimeout(()=>{vsBot=true;botLevel=1;myColor=Math.random()<0.5?'w':'b';startGameUI('Bot Alex 🤖',1200);},900);}},6000);}});}
+function cancelMatch(){if(matchTimer)clearInterval(matchTimer);if(joinPoll)clearInterval(joinPoll);if(currentCode&&!game)db.ref('games/'+currentCode).remove();showScreen('play-screen');}
+function startOnlineGame(code){vsBot=false;vsLocal=false;currentCode=code;
+ db.ref('games/'+code).once('value').then(s=>{const g=s.val();if(!g)return;
+  myColor=g.host===currentUser.uid?'w':'b';
+  oppUid=g.host===currentUser.uid?g.guest:g.host;
+  selectedMinutes=g.minutes||10;
+  db.ref('users/'+oppUid).once('value').then(us=>{const u=us.val()||{username:'Opponent',rating:1200,avatar:'♟'};
+   startGameUI(u.username+' 🟢',u.rating);startPolling(code);});});}
+function startPolling(code){if(pollTimer){pollTimer.off();}
+ pollTimer=db.ref('games/'+code+'/moves');
+ pollTimer.on('child_added',s=>{const m=s.val();if(!m||!game)return;
+  if(m.by===currentUser.uid)return;
+  const mv=game.move({from:m.from,to:m.to,promotion:m.promo||'q'});
+  if(mv)afterMove(m,false);});
+ db.ref('games/'+code+'/chat').on('child_added',s=>{const m=s.val();if(!m)return;
+  el('gchat-box').innerHTML+='<div class="msg '+(m.from===currentUser.uid?'me':'other')+'">'+m.text+'</div>';});}
+function challengeUser(uid,name){vsBot=false;vsLocal=false;currentCode=genCode();
+ db.ref('games/'+currentCode).set({host:currentUser.uid,status:'waiting',created:Date.now(),minutes:5});
+ db.ref('chats/'+[currentUser.uid,uid].sort().join('_')+'/messages').push({from:currentUser.uid,text:'⚔️ I challenge you! Room code: '+currentCode,t:Date.now()});
+ alert('⚔️ Challenge sent to '+name+'! Code: '+currentCode);
+ showScreen('lobby-screen');el('game-code').style.display='block';el('game-code').textContent=currentCode;el('share-wa').style.display='none';
+ el('lobby-title').textContent='Waiting for '+name+'…';el('lobby-sub').textContent='They got your challenge in chat 💬';
+ joinPoll=setInterval(()=>{db.ref('games/'+currentCode).once('value').then(s=>{const g=s.val();
+  if(g&&g.status==='playing'){clearInterval(joinPoll);startOnlineGame(currentCode);}});},1500);}
+function challengeFriend(){const un=(el('friend-challenge-input').value||'').trim();if(!un)return alert('Type a username!');
+ db.ref('users').orderByChild('username').equalTo(un).once('value').then(s=>{const v=s.val();
+  if(!v)return alert('User not found!');challengeUser(Object.keys(v)[0],un);});}
+function startWatch(){watchMode=true;vsBot=false;vsLocal=false;game=new Chess();myColor='x';
+ showScreen('game-screen');
+ el('g-opp-name').textContent='KnightRider 🟢';el('g-opp-rating').textContent=2387;
+ el('g-me-name').textContent='MagnusMax ✅';el('g-me-rating').textContent=2450;
+ el('g-me-avatar').firstChild.textContent='🧑';el('g-opp-avatar').firstChild.textContent='🧑‍💼';
+ el('g-mode-label').textContent='● SPECTATING LIVE';el('g-id').textContent='#LIVE';
+ el('g-spec').textContent=Math.floor(Math.random()*300)+80;
+ renderBoard('board',game,false);renderMoves();
+ if(watchTimer)clearInterval(watchTimer);
+ watchTimer=setInterval(()=>{if(!game)return;if(game.game_over()){clearInterval(watchTimer);alert('🏁 Game over!');return;}
+  const m=chooseBotMove(game,2);if(m){game.move(m);renderBoard('board',game,false);renderMoves();if(soundOn)beep();
+   el('g-status').textContent=(game.turn()==='w'?'White':'Black')+"'s turn";}},1200);}
+let editCycle=['wP','bP','wN','bN','wB','bB','wR','bR','wQ','bQ','wK','bK',null];
+function openBoardEditor(){editorMode=true;game=new Chess();game.clear();vsBot=false;vsLocal=false;
+ showScreen('puzzle-play-screen');el('pzp-title').textContent='Board Editor ✏️';
+ el('pzp-sub').textContent='Tap squares to cycle pieces';el('pzp-diff').textContent='Edit';
+ el('pz-status').textContent='Place pieces → ➡ plays it vs Bot';
+ renderPzBoardStatic();}function renderPzBoardStatic(){const b=el('pz-board');b.innerHTML='';
+ for(let r=0;r<8;r++)for(let c=0;c<8;c++){const sq=document.createElement('div');
+  sq.className='sq '+(((r+c)%2===0)?'gl':'gd');sq.onclick=()=>editorTap(r,c);b.appendChild(sq);}}
+function editorTap(r,c){const sq=el('pz-board').children[r*8+c];
+ const cur=sq.dataset.p||'';const next=editCycle[(editCycle.indexOf(cur)+1)%editCycle.length];
+ sq.dataset.p=next||'';sq.innerHTML='';
+ if(next){const sp=document.createElement('span');sp.className=next[0]==='w'?'piece-w':'piece-b';sp.style.fontSize='min(9vw,40px)';sp.textContent=PIECES[next];sq.appendChild(sp);}}
+function finishEditor(){let fen='';
+ for(let r=0;r<8;r++){let row='',e=0;
+  for(let c=0;c<8;c++){const p=el('pz-board').children[r*8+c].dataset.p;
+   if(p){if(e){row+=e;e=0;}row+=(p[0]==='w'?p[1]:p[1].toLowerCase());}else e++;}
+  if(e)row+=e;fen+=row+(r<7?'/':'');}
+ fen+=' w - - 0 1';editorMode=false;
+ const t=new Chess();if(!t.load(fen))return alert('Invalid position — need exactly one White & one Black king!');
+ vsBot=true;vsLocal=false;botLevel=1;myColor='w';selectedMinutes=10;
+ startGameUI('Custom Position ✏️',1200);game.load(fen);renderBoard('board',game,true);}
+function endgameTrainer(){vsBot=true;vsLocal=false;watchMode=false;editorMode=false;botLevel=1;myColor='w';selectedMinutes=10;
+ startGameUI('Endgame Trainer ♛',1200);
+ game.load('4k3/8/4K3/8/8/8/8/7Q w - - 0 1');renderBoard('board',game,true);}
+</script>
+<script>
+const PUZZLES=[
+ {cat:'m1',diff:'🟢 Easy',fen:'r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4',sol:['h5','f7'],label:"Scholar's Mate — Qxf7#"},
+ {cat:'m1',diff:'🟢 Easy',fen:'6k1/5ppp/8/8/8/8/5PPP/3R2K1 w - - 0 1',sol:['d1','d8'],label:'Back Rank — Rd8#'},
+ {cat:'m1',diff:'🟢 Easy',fen:'6k1/5ppp/8/8/8/8/8/R3R2K w - - 0 1',sol:['e1','e8'],label:'Ladder Mate — Re8#'},
+ {cat:'m1',diff:'🟢 Easy',fen:'4k3/8/4K3/8/8/8/8/7Q w - - 0 1',sol:['h1','h8'],label:'Queen Mate — Qh8#'},
+ {cat:'m2',diff:'🟡 Medium',fen:'6k1/8/8/8/8/8/8/R6R w - - 0 1',sol:['a1','a7','g8','f8','h1','h8'],label:'Ladder in 2 — Rh8#'},
+ {cat:'tac',diff:'🟡 Medium',fen:'r3k3/8/4N3/8/8/8/8/4K3 w - - 0 1',sol:['e6','c7'],label:'Knight Fork — Nc7+'},
+ {cat:'end',diff:'🟡 Medium',fen:'8/2P5/8/8/8/8/8/4K2k w - - 0 1',sol:['c7','c8'],label:'Promote & Win — c8=Q'}
+];
+let pzCur=0,pzGame=null,pzStep=0,pzSel=null,rushActive=false,rushScore=0,rushEnd=0;
+function renderPzBoard(){const b=el('pz-board');b.innerHTML='';const pos=pzGame.board();
+ for(let r=0;r<8;r++)for(let c=0;c<8;c++){const p=pos[r][c];const sq=document.createElement('div');
+  sq.className='sq '+(((r+c)%2===0)?'gl':'gd');
+  if(p){const sp=document.createElement('span');sp.className=p.color==='w'?'piece-w':'piece-b';sp.style.fontSize='min(9vw,40px)';sp.textContent=PIECES[(p.color==='w'?'w':'b')+p.type.toUpperCase()];sq.appendChild(sp);}
+  sq.onclick=()=>pzTap(r,c);b.appendChild(sq);}}
+function startPuzzle(i){pzCur=i;const p=PUZZLES[i];pzGame=new Chess();pzGame.load(p.fen);pzStep=0;pzSel=null;editorMode=false;
+ showScreen('puzzle-play-screen');
+ el('pzp-title').textContent='Puzzle #'+(1001+i);el('pzp-sub').textContent=p.label;el('pzp-diff').textContent=p.diff;
+ el('pz-status').textContent='Your move — find the best!';renderPzBoard();}
+function pzTap(r,c){if(editorMode){editorTap(r,c);return;}
+ const p=pzGame.board()[r][c];
+ if(pzSel){const from=sqName(pzSel),to=sqName([r,c]);const sol=PUZZLES[pzCur].sol;
+  const expF=sol[pzStep*2],expT=sol[pzStep*2+1];
+  if(from===expF&&to===expT){pzGame.move({from:from,to:to,promotion:'q'});pzSel=null;pzStep++;
+   const rf=sol[pzStep*2],rt=sol[pzStep*2+1];
+   if(rf){pzGame.move({from:rf,to:rt});renderPzBoard();el('pz-status').textContent='Black replies… your move!';return;}
+   el('pz-status').innerHTML='✅ SOLVED! +10 rating';beep();
+   if(userData)db.ref('users/'+currentUser.uid).update({puzzles:(userData.puzzles||0)+1,rating:(userData.rating||1200)+10,streak:(userData.streak||0)+1});
+   if(rushActive){rushScore++;
+    if(Date.now()>rushEnd){rushActive=false;alert('⏱ Time up! Score: '+rushScore+' ⚡');showScreen('puzzles-screen');}
+    else setTimeout(()=>startPuzzle(Math.floor(Math.random()*PUZZLES.length)),500);}
+   return;}
+  el('pz-status').textContent='❌ Not the best move — try again!';pzSel=null;return;}
+ if(p&&p.color===pzGame.turn())pzSel=[r,c];}
+function pzHint(){const sol=PUZZLES[pzCur].sol;alert('💡 Hint: '+sol[pzStep*2]+' → '+sol[pzStep*2+1]);}
+function pzGiveUp(){alert('🏳 Solution: '+PUZZLES[pzCur].sol.join(' → '));}
+function pzNext(){if(editorMode){finishEditor();return;}startPuzzle((pzCur+1)%PUZZLES.length);}
+function exitPuzzle(){editorMode=false;rushActive=false;showScreen('puzzles-screen');renderPuzzleList('all');}
+function renderPuzzleList(cat){const list=PUZZLES.filter(p=>cat==='all'||p.cat===cat);
+ el('pz-list').innerHTML=list.map(p=>'<div class="row" onclick="startPuzzle('+PUZZLES.indexOf(p)+')"><div class="ibox">🧩</div><div style="flex:1"><h5>'+p.label+'</h5><p class="muted">'+p.diff+'</p></div><span class="chev">›</span></div>').join('');
+ if(el('pz-acc'))el('pz-acc').textContent=Math.min(95,50+(userData?(userData.puzzles||0):0))+'%';}
+function filterPuzzles(cat,e){document.querySelectorAll('#pz-tabs .tab').forEach(t=>t.classList.remove('on'));e.classList.add('on');renderPuzzleList(cat);}
+function startPuzzleRush(){rushActive=true;rushScore=0;rushEnd=Date.now()+60000;
+ alert('⚡ PUZZLE RUSH — 60 seconds! Solve as many as you can!');
+ startPuzzle(Math.floor(Math.random()*PUZZLES.length));}
+function openLesson(i){const L=[
+ '♟ LESSON 1 — The pawn moves 1 square forward (2 on its first move). It captures DIAGONALLY!',
+ '🏰 LESSON 2 — Castling: King moves 2 squares toward the rook. Requirements: no pieces between, king not in check, neither piece moved.',
+ '⚔️ LESSON 3 — Basic checkmate: Use Queen + King. Push the enemy king to the edge, then mate with your queen protected by your king (like Qh8#!).',
+ '🎯 LESSON 4 — Opening principles: 1) Control the center 2) Develop knights & bishops 3) Castle early 4) Don\'t bring the queen out too soon!'];
+ alert(L[i]);}
+setInterval(()=>{const now=new Date();const end=new Date();end.setHours(23,59,59,999);
+ const d=Math.max(0,end-now);const t=String(Math.floor(d/3600000)).padStart(2,'0')+':'+String(Math.floor(d/60000)%60).padStart(2,'0')+':'+String(Math.floor(d/1000)%60).padStart(2,'0');
+ if(el('pz-timer'))el('pz-timer').textContent=t;if(el('dl-timer'))el('dl-timer').textContent=t;},1000);
+setInterval(()=>{if(currentUser)db.ref('users/'+currentUser.uid+'/lastOnline').set(Date.now());},60000);
+auth.getRedirectResult().catch(e=>alert('Google login: '+e.message));
+setTimeout(()=>{const m=location.search.match(/game=([A-Za-z0-9]+)/);if(m&&currentUser)joinGame(m[1].toUpperCase());},3000);
+console.log('♟ CHESSMATE v2 LOADED — Think. Plan. Win. 👑');
+</script>
+</body>
+</html>
