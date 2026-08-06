@@ -82,6 +82,8 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 </style>
 </head>
 <body>
+  <script>window.addEventListener('error',function(e){var d=document.getElementById('errbox');if(d)d.textContent='ERR: '+e.message+' (line '+e.lineno+')';},true);</script>
+  <div id="errbox" style="color:#ff5555;white-space:pre-wrap;padding:8px;font-size:12px"></div>
 
 <!-- AUTH -->
 <div id="auth-screen" class="screen active">
@@ -823,7 +825,8 @@ function renderLeaderboard(){
   document.getElementById('lb-your-rating').textContent=r;
 }
 // ===== NOTIFICATIONS =====function renderNotifications(){
-  const list=document.getElementById('notif-list');if(!list)return;
+function renderNotifications(){
+const list=document.getElementById('notif-list');if(!list)return;
   list.innerHTML='<div class="row"><div class="ibox">🧩</div><div style="flex:1"><h5>Daily Puzzle Ready</h5><p class="muted">Solve now to keep your streak!</p></div></div><div class="row"><div class="ibox">🏆</div><div style="flex:1"><h5>Season 12 is live</h5><p class="muted">Climb the leaderboard!</p></div></div>';
   db.ref('friendRequests/'+currentUser.uid).on('child_added',snap=>{
     db.ref('users/'+snap.key).once('value').then(us=>{
