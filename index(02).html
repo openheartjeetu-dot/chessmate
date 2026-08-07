@@ -1206,5 +1206,54 @@ auth.getRedirectResult().catch(e=>alert('Google login: '+e.message));
 setTimeout(()=>{const m=location.search.match(/game=([A-Za-z0-9]+)/);if(m&&currentUser)joinGame(m[1].toUpperCase());},3000);
 console.log('♟ CHESSMATE v2 LOADED — Think. Plan. Win. 👑');
 </script>
+<style>#pz-board{display:grid;grid-template-columns:repeat(8,1fr);border:3px solid #2a352c;border-radius:10px;overflow:hidden;margin:6px auto}</style>
+<div class="modal" id="lang-modal"><div class="modal-card">
+ <h3>🌐 Choose Language</h3>
+  <div class="row" onclick="setLang('en')"><div class="ibox">🇬</div><div><h5>English</h5></div></div>
+   <div class="row" onclick="setLang('hi')"><div class="ibox">🇮🇳</div><div><h5>हिन्दी</h5></div></div>
+    <div class="row" onclick="setLang('bn')"><div class="ibox">🇮</div><div><h5>বাংলা</h5></div></div>
+     <div class="row" onclick="setLang('ta')"><div class="ibox">🇮</div><div><h5>தமிழ்</h5></div></div>
+      <button class="btn btn-dark" onclick="closeModal('lang-modal')">Close</button>
+      </div></div>
+      <script>
+      function renderPzBoard(){const b=el('pz-board');b.innerHTML='';const pos=pzGame.board();
+       for(let r=0;r<8;r++)for(let c=0;c<8;c++){const p=pos[r][c];const sq=document.createElement('div');
+         sq.className='sq '+(((r+c)%2===0)?'gl':'gd');
+           if(p){const sp=document.createElement('span');sp.className=p.color==='w'?'piece-w':'piece-b';sp.style.fontSize='min(9vw,40px)';sp.textContent=PIECES[(p.color==='w'?'w':'b')+p.type.toUpperCase()];sq.appendChild(sp);}
+             sq.onclick=()=>pzTap(r,c);b.appendChild(sq);}}
+             const __ss=showScreen;
+             showScreen=function(id){
+              if(id==='home-screen'){const act=document.querySelector('.screen.active');
+                if(act&&act.id!=='auth-screen'&&!window.__goHomeIntent)return;}
+                 window.__goHomeIntent=false;__ss(id);};
+                 goHome=function(){window.__goHomeIntent=true;__ss('home-screen');renderHome();};
+                 setTimeout(()=>{
+                  const hb=document.querySelector('#home-screen .topbar > div:last-child');
+                   if(hb&&!el('home-msg-btn'))hb.insertAdjacentHTML('afterbegin','<div class="hchip" id="home-msg-btn" onclick="showChats()">💬</div>');
+                    const fb=document.querySelector('#friends-screen .topbar > div:last-child');
+                     if(fb&&!el('fr-msg-btn'))fb.insertAdjacentHTML('beforeend','<div class="hchip" id="fr-msg-btn" onclick="showChats()">💬</div>');
+                      const at=document.querySelector('#auth-screen .tabs');
+                       if(at)at.innerHTML='<div class="tab" id="tab-login" onclick="switchTab(\'login\')">→ Log In</div><div class="tab on" id="tab-signup" onclick="switchTab(\'signup\')">👤+ Sign Up</div>';
+                        const tb=document.querySelector('#auth-screen .topbar');
+                         if(tb)tb.innerHTML='<div class="back">←</div><div class="hchip" onclick="openLang()">🌐 <span id="lang-label">English</span></div>';
+                          if(localStorage.getItem('lang'))setLang(localStorage.getItem('lang'));
+                          },600);
+                          function openLang(){el('lang-modal').classList.add('open')}
+                          const LANGS={
+                           en:{sub:'Join millions of players worldwide',login:'→ Log In',signup:'👤+ Sign Up',create:'Create Account →',loginb:'Log In →',guest:'🎮 Continue as Guest'},
+                            hi:{sub:'दुनिया भर के लाखों खिलाड़ियों से जुड़ें',login:'→ लॉग इन',signup:'👤+ साइन अप',create:'अकाउंट बनाएं →',loginb:'लॉग इन →',guest:'🎮 अतिथि के रूप में खेलें'},
+                             bn:{sub:'সারা বিশ্বের লক্ষাধিক খেলোয়াড়ের সাথে যোগ দিন',login:'→ লগ ইন',signup:'👤+ সাইন আপ',create:'অ্যাকাউন্ট তৈরি →',loginb:'লগ ইন →',guest:'🎮 অতিথি হিসেবে খেলুন'},
+                              ta:{sub:'உலகம் முழுவதும் வீரர்களுடன் இணையுங்கள்',login:'→ உள்நுழைய',signup:'👤+ பதிவு',create:'கணக்கு உருவாக்கு →',loginb:'உள்நுழைய →',guest:'🎮 விருந்தினராக விளையாடு'}
+                              };
+                              function setLang(l){localStorage.setItem('lang',l);const L=LANGS[l];
+                               el('lang-label').textContent={en:'English',hi:'हिन्दी',bn:'বাংলা',ta:'தமிழ்'}[l];
+                                const s=document.querySelector('#auth-screen .muted');if(s)s.textContent=L.sub;
+                                 if(el('tab-login'))el('tab-login').textContent=L.login;
+                                  if(el('tab-signup'))el('tab-signup').textContent=L.signup;
+                                   const c=document.querySelector('[onclick="signup()"]');if(c)c.textContent=L.create;
+                                    const lb=document.querySelector('[onclick="login()"]');if(lb)lb.textContent=L.loginb;
+                                     const g=document.querySelector('[onclick="guestLogin()"]');if(g)g.textContent=L.guest;
+                                      closeModal('lang-modal');}
+                                      </script>
 </body>
 </html>
