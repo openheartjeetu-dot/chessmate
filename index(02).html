@@ -1255,5 +1255,21 @@ console.log('♟ CHESSMATE v2 LOADED — Think. Plan. Win. 👑');
                                      const g=document.querySelector('[onclick="guestLogin()"]');if(g)g.textContent=L.guest;
                                       closeModal('lang-modal');}
                                       </script>
+  <script>
+  openBoardEditor=function(){editorMode=true;vsBot=false;vsLocal=false;
+   pzGame=new Chess();pzGame.clear();pzSel=null;
+    showScreen('puzzle-play-screen');
+     el('pzp-title').textContent='Board Editor ✏️';
+      el('pzp-sub').textContent='Tap squares to cycle pieces';
+       el('pzp-diff').textContent='Edit';
+        el('pz-status').textContent='Place pieces → ➡ plays it vs Bot';
+         renderPzBoard();
+          document.querySelectorAll('#puzzle-play-screen .btn').forEach(b=>{
+            if(b.textContent.includes('Hint')||b.textContent.includes('Give Up'))b.style.display='none';});};
+            const _sp2=startPuzzle;
+            startPuzzle=function(i){document.querySelectorAll('#puzzle-play-screen .btn').forEach(b=>b.style.display='');_sp2(i);};
+            const HINTS=['The queen eyes a weak square next to the enemy king…','Rooks love the back rank when pawns can\'t run!','Ladder mate: one rook cuts, the other mates.','Queen to the back rank — the king on e6 covers the escape!','First cut the king off the 7th rank… then mate on the 8th.','A knight check that also attacks the rook on a8!','March that pawn to the last rank — promotion wins!'];
+            pzHint=function(){alert('💡 Clue: '+HINTS[pzCur]);};
+            </script>                                  
 </body>
 </html>
