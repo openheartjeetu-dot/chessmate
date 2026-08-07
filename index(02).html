@@ -1349,5 +1349,8 @@ console.log('♟ CHESSMATE v2 LOADED — Think. Plan. Win. 👑');
                            if(x.textContent.includes('Next')||x.textContent.includes('Play'))x.innerHTML='▶ Play vs Bot';
                              else x.style.display='none';});};
                              </script>
+        <script>
+          setTimeout(()=>{document.querySelectorAll('#more-screen .row').forEach(r=>{if(r.textContent.includes('Board Editor'))r.style.display='none';});},600);
+          </script>
         </body>
 </html>
