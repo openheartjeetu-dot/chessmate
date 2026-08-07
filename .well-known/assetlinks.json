@@ -1,0 +1,10 @@
+[{
+              "relation": ["delegate_permission/common.handle_all_urls"],
+                    "target": {
+                                "namespace": "android_app",
+                                        "package_name": "io.github.openheartjeetu_dot.twa",
+                                                "sha256_cert_fingerprints": ["92:18:C4:A0:05:43:84:ED:F1:81:8D:07:F0:58:21:75:50:67:09:86:0A:46:57:4D:F8:DC:49:A9:5D:C4:A9:96"]
+                    }
+}]
+
+                    
