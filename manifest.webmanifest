@@ -1,12 +1,31 @@
 {
-      "name": "ChessMaster — Think. Plan. Win.",
-        "short_name": "ChessMaster",
-          "start_url": ".",
-            "display": "standalone",
-              "background_color": "#060a08",
-                "theme_color": "#060a08",
-                  "icons": [
-                      {"src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"},
-                          {"src": "icon.svg", "sizes": "192x192 512x512", "type": "image/svg+xml", "purpose": "maskable"}
-                            ]
-                            }
+    "name": "Chessmate - Think. Plan. Win.",
+      "short_name": "Chessmate",
+        "description": "Play chess online with friends, solve puzzles, learn and compete.",
+          "start_url": "./index.html",
+            "scope": "./",
+              "display": "standalone",
+                "orientation": "portrait",
+                  "background_color": "#05080a",
+                    "theme_color": "#05080a",
+                      "categories": ["games", "entertainment"],
+                        "icons": [
+                            {
+                                  "src": "file_00000000911082088487c612c1ae258e.png",
+                                        "sizes": "1024x1024",
+                                              "type": "image/png",
+                                                    "purpose": "any"
+                                                        },
+                                                            {
+                                                                  "src": "file_00000000911082088487c612c1ae258e.png",
+                                                                        "sizes": "1024x1024",
+                                                                              "type": "image/png",
+                                                                                    "purpose": "maskable"
+                                                                                        },
+                                                                                            {
+                                                                                                  "src": "file_00000000911082088487c612c1ae258e.png",
+                                                                                                        "sizes": "any",
+                                                                                                              "type": "image/png"
+                                                                                                                  }
+                                                                                                                    ]
+                                                                                                                    }
