@@ -1,3 +1,138 @@
+<<<<<<< HEAD
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Chessmate — Think. Plan. Win.</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#05080a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Chessmate">
+<link rel="apple-touch-icon" href="icon.svg">
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js'));}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<style>
+:root{
+  --bg:#05080a;--card:#0d1310;--card2:#131a16;--border:#1e2a22;
+    --green:#a3e635;--green2:#84cc16;--gdark:#3f6212;
+      --gold:#fbbf24;--red:#ef4444;--purple:#a78bfa;--blue:#60a5fa;
+        --text:#e8ede8;--muted:#8fa096;
+        }
+        *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+        body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;min-height:100vh;overflow-x:hidden;padding-bottom:80px}
+        .screen{display:none;flex-direction:column;min-height:100vh;padding:14px}
+        .screen.active{display:flex}
+        .topbar{display:flex;justify-content:space-between;align-items:center;margin:4px 0 16px;gap:10px}
+        .back{width:42px;height:42px;min-width:42px;border-radius:50%;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;color:var(--text)}
+        .logo{font-size:22px;font-weight:800;letter-spacing:-0.5px}
+        .logo b{color:var(--green)}
+        .hchip{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:8px 12px;font-size:12px;display:flex;align-items:center;gap:6px;position:relative;cursor:pointer}
+        .dotb{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;border-radius:10px;font-size:9px;padding:2px 5px;font-weight:700}
+        .card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:16px;margin:8px 0}
+        .sec{color:var(--green);font-size:13px;font-weight:700;margin:18px 0 10px;display:flex;justify-content:space-between;align-items:center;text-transform:uppercase;letter-spacing:0.5px}
+        .sec .link{color:var(--green);font-size:12px;font-weight:600;cursor:pointer;text-transform:none}
+        .muted{color:var(--muted);font-size:12px}
+        .grid{display:grid;gap:10px}
+        .g2{grid-template-columns:1fr 1fr}
+        .g3{grid-template-columns:repeat(3,1fr)}
+        .g4{grid-template-columns:repeat(4,1fr)}
+        .btn{border:none;border-radius:14px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;width:100%;margin:6px 0;color:var(--text);display:flex;align-items:center;justify-content:center;gap:8px;transition:transform 0.1s}
+        .btn:active{transform:scale(0.98)}
+        .btn-grad{background:linear-gradient(135deg,#3f6212,#84cc16);color:#fff;box-shadow:0 4px 18px rgba(132,204,22,.25)}
+        .btn-dark{background:var(--card2);border:1px solid var(--border)}
+        .btn-gold{background:linear-gradient(135deg,#713f12,#a16207);color:#fde68a;border:1px solid #ca8a04}
+        .btn-red{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+        .btn-purple{background:linear-gradient(135deg,#4c1d95,#7c3aed);color:#ede9fe}
+        .btn-sm{width:auto;padding:10px 16px;font-size:13px;margin:0;border-radius:12px}
+        .field{display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:14px;margin:8px 0}
+        .field input{background:none;border:none;color:var(--text);flex:1;font-size:15px;outline:none}
+        .tabs{display:flex;gap:6px;background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:4px;margin:12px 0;overflow-x:auto}
+        .tab{flex:1;min-width:max-content;padding:11px 14px;text-align:center;color:var(--muted);font-weight:600;border-radius:11px;cursor:pointer;font-size:13px;white-space:nowrap}
+        .tab.on{color:var(--green);border:1px solid var(--green);background:rgba(163,230,53,.08)}
+        .row{display:flex;align-items:center;gap:12px;padding:14px;background:var(--card2);border:1px solid var(--border);border-radius:14px;margin:8px 0;cursor:pointer;transition:background 0.2s}
+        .row:active{background:#1a241e}
+        .ibox{width:44px;height:44px;min-width:44px;background:#1a231c;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px}
+        .row h5{font-size:14px;font-weight:600}
+        .row p{font-size:11px;color:var(--muted);margin-top:2px}
+        .chev{margin-left:auto;color:var(--muted);font-size:18px}
+        .toggle{width:48px;height:26px;background:#2a352c;border-radius:13px;position:relative;cursor:pointer;margin-left:auto;transition:.2s;flex-shrink:0}
+        .toggle.on{background:linear-gradient(90deg,#4d7c0f,#84cc16)}
+        .toggle::after{content:'';position:absolute;width:22px;height:22px;background:#fff;border-radius:50%;top:2px;left:2px;transition:.2s;box-shadow:0 2px 4px rgba(0,0,0,0.2)}
+        .toggle.on::after{left:24px}
+        .avatar{width:56px;height:56px;border-radius:50%;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:30px;position:relative;flex-shrink:0}
+        .avatar.lg{width:84px;height:84px;font-size:46px}
+        .ring{border:2px solid var(--green);border-radius:50%;padding:3px;box-shadow:0 0 14px rgba(163,230,53,.35);display:inline-block}
+        .online-dot{position:absolute;bottom:2px;right:2px;width:12px;height:12px;background:#4ade80;border:2px solid var(--bg);border-radius:50%}
+        .offline-dot{position:absolute;bottom:2px;right:2px;width:12px;height:12px;background:#64748b;border:2px solid var(--bg);border-radius:50%}
+        .tag-gold{color:var(--gold);background:rgba(251,191,36,.12);padding:4px 10px;border-radius:10px;font-size:11px;display:inline-block;font-weight:700;border:1px solid rgba(251,191,36,0.2)}
+        .bar{height:6px;background:#233026;border-radius:3px;overflow:hidden;margin:6px 0}
+        .bar i{display:block;height:100%;background:linear-gradient(90deg,#4d7c0f,#a3e635)}
+        .stat{background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:12px;text-align:center}
+        .stat b{font-size:20px;display:block;color:var(--green)}
+        .stat span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px}
+        </style>
+        </head>
+        <body>
+        <style>
+        #board{display:grid;grid-template-columns:repeat(8,1fr);border:3px solid #2a352c;border-radius:10px;overflow:hidden;margin:6px auto}
+        .sq{aspect-ratio:1/1;width:100%;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;line-height:1}
+        .gl{background:#eeeed2}.gd{background:#769656}
+        body.wood .gl{background:#f0d9b5}body.wood .gd{background:#b58863}
+        .sel{box-shadow:inset 0 0 0 4px #f7ec59}
+        .hint::after{content:'';position:absolute;width:28%;height:28%;background:rgba(0,0,0,.3);border-radius:50%}
+        .piece-w{color:#fff;text-shadow:0 0 2px #000,0 1px 2px #000}
+        .piece-b{color:#1a1a1a;text-shadow:0 1px 1px rgba(255,255,255,.25)}
+        .coord{position:absolute;font-size:8px;font-weight:700;opacity:.7}
+        .coord.f{bottom:2px;right:3px}.coord.r{top:2px;left:3px}
+        .clock{font-family:monospace;font-size:18px;background:var(--card2);border:1px solid var(--border);padding:8px 16px;border-radius:12px}
+        .clock.on{background:var(--green);color:#0a1a05;font-weight:700;border-color:var(--green)}
+        .clock.low{background:rgba(239,68,68,.15);color:var(--red);border-color:var(--red)}
+        .cap-strip{min-height:22px;font-size:15px;letter-spacing:2px;margin:2px 4px;color:#cfd8cf}
+        .nav{position:fixed;bottom:0;left:0;right:0;background:#0a0f0c;border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:10px 0;z-index:50}
+        .nav-item{display:flex;flex-direction:column;align-items:center;font-size:10px;color:var(--muted);cursor:pointer;min-width:56px}
+        .nav-item .ni{font-size:22px;margin-bottom:3px}
+        .nav-item.active{color:var(--green)}
+        .hero{border-radius:20px;padding:18px;margin:8px 0;background:linear-gradient(120deg,#0d1a0d,#13240f);border:1px solid #2a4a1e;position:relative;overflow:hidden}
+        .hero .bigking{position:absolute;right:10px;top:-6px;font-size:110px;color:var(--green2);text-shadow:0 0 40px rgba(132,204,22,.7)}
+        .radar{width:150px;height:150px;margin:14px auto;border-radius:50%;position:relative;background:radial-gradient(circle,rgba(163,230,53,.08),transparent 70%);border:1px solid var(--border)}
+        .radar::before{content:'';position:absolute;inset:0;border-radius:50%;border:2px solid transparent;border-top-color:var(--green);animation:spin 1.6s linear infinite}
+        .radar::after{content:'';position:absolute;inset:18px;border-radius:50%;border:1px dashed #2a4a1e}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        .radar .pc{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:44px}
+        .podium{display:flex;align-items:flex-end;justify-content:center;gap:16px;margin:16px 0 8px}
+        .podium .p{text-align:center}
+        .podium .p .avatar{margin:0 auto}
+        .podium .p1 .avatar{width:88px;height:88px;font-size:46px;border:3px solid var(--gold);box-shadow:0 0 22px rgba(251,191,36,.45)}
+        .podium .p2 .avatar{border:3px solid #cbd5e1}
+        .podium .p3 .avatar{border:3px solid #b45309}
+        .chat-box{background:#0b141a;border:1px solid var(--border);border-radius:14px;padding:12px;margin-top:8px;max-height:260px;overflow-y:auto}
+        .msg{padding:8px 12px;margin:4px 0;border-radius:12px;background:#202c33;font-size:14px;max-width:80%;display:flex;flex-direction:column}
+        .msg .time{font-size:10px;opacity:.6;margin-top:2px;align-self:flex-end}
+        .msg.me{background:#005c4b;margin-left:auto;border-bottom-right-radius:4px}
+        .msg.other{border-bottom-left-radius:4px}
+        .avatar-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:8px 0}
+        .avatar-opt{font-size:26px;text-align:center;padding:8px;background:var(--card2);border-radius:10px;cursor:pointer}
+        .avatar-opt.picked{background:var(--gdark);border:1px solid var(--green)}
+        .result-win{color:#4ade80;font-weight:700}.result-loss{color:#ef4444;font-weight:700}.result-draw{color:#fbbf24;font-weight:700}
+        .code-display{background:var(--card2);border:1px solid var(--green);padding:16px;border-radius:12px;font-size:30px;letter-spacing:6px;text-align:center;margin:12px 0;font-weight:800;color:var(--green);box-shadow:0 0 20px rgba(163,230,53,.15)}
+        .mcard{background:var(--card2);border:1px solid var(--border);border-radius:16px;padding:14px;text-align:center;cursor:pointer;position:relative;overflow:hidden}
+        .mcard .ico{font-size:34px;display:block;margin-bottom:8px;filter:drop-shadow(0 0 12px rgba(163,230,53,.4))}
+        .mcard h4{font-size:14px;margin-bottom:4px}
+        .mcard.g{background:linear-gradient(160deg,#12210f,#0d1310)}
+        .mcard.b{background:linear-gradient(160deg,#0f1a24,#0d1310)}
+        .mcard.p{background:linear-gradient(160deg,#171226,#0d1310)}
+        .mcard.o{background:linear-gradient(160deg,#241a0a,#0d1310)}
+        .sheet{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--border);border-radius:20px 20px 0 0;padding:16px;z-index:90;max-height:70vh;overflow-y:auto;display:none}
+        .sheet.open{display:block}
+        .modal{position:fixed;inset:0;background:rgba(0,0,0,.78);display:none;align-items:center;justify-content:center;z-index:100}
+        .modal.open{display:flex}
+        .modal-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:24px;width:86%;max-width:360px;text-align:center;max-height:86vh;overflow-y:auto}
+        .ribbon{position:absolute;top:10px;left:-26px;transform:rotate(-45deg);font-size:10px;padding:3px 28px;color:#fff;font-weight:700}
+        </style>
+=======
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -131,7 +266,154 @@ body.wood .gl{background:#f0d9b5}body.wood .gd{background:#b58863}
 .modal-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:24px;width:86%;max-width:360px;text-align:center;max-height:86vh;overflow-y:auto}
 .ribbon{position:absolute;top:10px;left:-26px;transform:rotate(-45deg);font-size:10px;padding:3px 28px;color:#fff;font-weight:700}
 </style>
+>>>>>>> 45dcb1726eda300dba3cfbf4e1668e6b2b1164c9
 
+<<<<<<< HEAD
+        <!-- AUTH -->
+        <div id="auth-screen" class="screen active">
+         <div class="topbar"><div class="back">←</div><div class="hchip">🌐 English</div></div>
+          <div style="text-align:center;margin:10px 0 20px">
+            <div class="ring" style="display:inline-block"><div class="avatar lg">♚</div></div>
+              <h2 style="margin-top:14px">Welcome to <span style="color:var(--green)">Chessmate</span> 👑</h2>
+                <p class="muted">Join millions of players worldwide</p>
+                 </div>
+                  <div class="tabs"><div class="tab on" id="tab-signup" onclick="switchTab('signup')">👤+ Sign Up</div><div class="tab" id="tab-login" onclick="switchTab('login')">→ Log In</div></div>
+                   <div id="signup-form">
+                     <div class="field">👤<input id="signup-name" placeholder="Full Name"></div>
+                       <div class="field">✉️<input id="signup-email" type="email" placeholder="Email Address"></div>
+                         <div class="field">@<input id="signup-username" placeholder="Username"></div>
+                           <div class="field">🔒<input id="signup-password" type="password" placeholder="Password (8+ chars)"><span onclick="peek(this,'signup-password')">👁</span></div>
+                             <button class="btn btn-grad" onclick="signup()">Create Account →</button>
+                              </div>
+                               <div id="login-form" style="display:none">
+                                 <div class="field">👤<input id="auth-email" placeholder="Email or Username"></div>
+                                   <div class="field">🔒<input id="auth-password" type="password" placeholder="Password"><span onclick="peek(this,'auth-password')">👁</span></div>
+                                     <div style="display:flex;justify-content:space-between;align-items:center;margin:4px 2px">
+                                         <label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" checked style="accent-color:var(--green)"> Remember me</label>
+                                             <span style="color:var(--green);font-size:12px;cursor:pointer" onclick="alert('Reset link sent to your email!')">Forgot Password?</span>
+                                               </div>
+                                                 <button class="btn btn-grad" onclick="login()">Log In →</button>
+                                                  </div>
+                                                   <p class="muted" style="text-align:center;margin:10px 0">or continue with</p>
+                                                    <div class="grid g3">
+                                                      <button class="btn btn-dark btn-sm" style="width:100%" onclick="googleLogin()">🔵 Google</button>
+                                                        <button class="btn btn-dark btn-sm" style="width:100%" onclick="alert('Apple login coming soon!')">🍎 Apple</button>
+                                                          <button class="btn btn-dark btn-sm" style="width:100%" onclick="alert('Facebook login coming soon!')">📘 Facebook</button>
+                                                           </div>
+                                                            <button class="btn btn-dark" onclick="guestLogin()">🎮 Continue as Guest</button>
+                                                             <p class="muted" style="text-align:center;margin-top:10px">By continuing you agree to our <span style="color:var(--green)">Terms</span> & <span style="color:var(--green)">Privacy Policy</span></p>
+                                                             </div>
+                                                             <!-- HOME -->
+                                                             <div id="home-screen" class="screen">
+                                                              <div class="topbar">
+                                                                <div style="display:flex;align-items:center;gap:10px" onclick="showProfile()">
+                                                                   <div class="avatar" style="width:44px;height:44px;font-size:24px" id="h-avatar">♟<span class="online-dot"></span></div>
+                                                                      <div><h5 id="h-name">Player</h5><p class="muted">🏆 <span id="h-rating">1200</span></p></div>
+                                                                        </div>
+                                                                          <div class="logo">♟ Chess<b>mate</b></div>
+                                                                            <div style="display:flex;gap:8px">
+                                                                               <div class="hchip" onclick="showNotifications()">🔔<span class="dotb">3</span></div>
+                                                                                  <div class="hchip" onclick="showSettings()">⚙️</div>
+                                                                                    </div>
+                                                                                     </div>
+                                                                                      <div class="hero">
+                                                                                        <div class="bigking">♚</div>
+                                                                                          <p style="color:var(--green);font-weight:600">Welcome back,</p>
+                                                                                            <h2 id="h-welcome" style="font-size:26px;text-transform:uppercase">PLAYER!</h2>
+                                                                                              <p class="muted">Every move shapes your victory.</p>
+                                                                                                <div class="grid g3" style="margin-top:12px">
+                                                                                                   <div class="stat"><b id="h-rating2">1200</b><span>Rating</span></div>
+                                                                                                      <div class="stat"><b id="h-winrate">0%</b><span>Win rate</span></div>
+                                                                                                         <div class="stat"><b id="h-games">0</b><span>Games</span></div>
+                                                                                                           </div>
+                                                                                                            </div>
+                                                                                                             <div class="grid g4">
+                                                                                                               <div class="mcard g" onclick="showPlay()"><span class="ico">♟</span><h4>PLAY</h4><p class="muted">Online</p></div>
+                                                                                                                 <div class="mcard b" onclick="showPuzzles()"><span class="ico">🧩</span><h4>PUZZLES</h4><p class="muted">Daily boost</p></div>
+                                                                                                                   <div class="mcard p" onclick="showLearn()"><span class="ico">🎓</span><h4>LEARN</h4><p class="muted">Courses</p></div>
+                                                                                                                     <div class="mcard o" onclick="showPlay()"><span class="ico">⚔️</span><h4>BATTLE</h4><p class="muted">Tournaments</p></div>
+                                                                                                                      </div>
+                                                                                                                       <div class="sec">Play Your Way <span class="link" onclick="showPlay()">View all →</span></div>
+                                                                                                                        <div class="tabs">
+                                                                                                                          <div class="tab" onclick="quickTime(5)">⚡ 5m</div>
+                                                                                                                            <div class="tab" onclick="quickTime(3)">⏱ 3m</div>
+                                                                                                                              <div class="tab" onclick="quickTime(10)">🕐 10m</div>
+                                                                                                                                <div class="tab" onclick="quickTime(30)">📅 30m</div>
+                                                                                                                                  <div class="tab" onclick="showPlay()">🎛 Custom</div>
+                                                                                                                                   </div>
+                                                                                                                                    <div class="grid g2">
+                                                                                                                                      <div class="card" style="margin:0">
+                                                                                                                                         <div class="sec" style="margin:0 0 6px">🧩 Daily Puzzle</div>
+                                                                                                                                            <p class="muted">Solve and sharpen your mind!</p>
+                                                                                                                                               <div class="bar"><i style="width:60%"></i></div>
+                                                                                                                                                  <p class="muted">Difficulty: Medium • 🪙 20</p>
+                                                                                                                                                     <button class="btn btn-grad btn-sm" onclick="startPuzzle(0)">Solve Puzzle</button>
+                                                                                                                                                       </div>
+                                                                                                                                                         <div class="card" style="margin:0">
+                                                                                                                                                            <div class="sec" style="margin:0 0 6px">🎯 Today's Challenge</div>
+                                                                                                                                                               <p class="muted">Beat Magnus Bot (1600)</p>
+                                                                                                                                                                  <div class="bar"><i style="width:33%"></i></div>
+                                                                                                                                                                     <p class="muted">Win 3 in a row → 🎁 Grand Prize</p>
+                                                                                                                                                                        <button class="btn btn-gold btn-sm" onclick="challengeBot(1600)">▶ Play</button>
+                                                                                                                                                                          </div>
+                                                                                                                                                                           </div>
+                                                                                                                                                                            <div class="grid g3" style="margin-top:10px">
+                                                                                                                                                                              <div class="card" style="margin:0">
+                                                                                                                                                                                 <div class="sec" style="margin:0 0 6px">Friends Online</div>
+                                                                                                                                                                                    <div id="home-friends"><p class="muted">Loading…</p></div>
+                                                                                                                                                                                      </div>
+                                                                                                                                                                                        <div class="card" style="margin:0">
+                                                                                                                                                                                           <div class="sec" style="margin:0 0 6px">Leaderboard</div>
+                                                                                                                                                                                              <div id="home-lb"></div>
+                                                                                                                                                                                                </div>
+                                                                                                                                                                                                  <div class="card" style="margin:0">
+                                                                                                                                                                                                     <div class="sec" style="margin:0 0 6px">Recent Games</div>
+                                                                                                                                                                                                        <div id="home-recent"><p class="muted">No games yet</p></div>
+                                                                                                                                                                                                          </div>
+                                                                                                                                                                                                           </div>
+                                                                                                                                                                                                           </div>
+                                                                                                                                                                                                           <!-- PLAY -->
+                                                                                                                                                                                                           <div id="play-screen" class="screen">
+                                                                                                                                                                                                            <div class="topbar"><div class="back" onclick="goHome()">←</div>
+                                                                                                                                                                                                              <div style="text-align:center"><div class="logo">Play</div><div class="subtitle">Choose your game. Challenge yourself.</div></div>
+                                                                                                                                                                                                                <div class="hchip">🏆 <span id="p-rating">1200</span></div></div>
+                                                                                                                                                                                                                 <div class="tabs">
+                                                                                                                                                                                                                   <div class="tab on">🌐 Online</div>
+                                                                                                                                                                                                                     <div class="tab" onclick="showAI()">🖥 Computer</div>
+                                                                                                                                                                                                                       <div class="tab" onclick="showFriends()">👥 Friends</div>
+                                                                                                                                                                                                                         <div class="tab" onclick="playLocal()">👤 Local</div>
+                                                                                                                                                                                                                          </div>
+                                                                                                                                                                                                                           <div class="card">
+                                                                                                                                                                                                                             <div class="sec" style="margin:0 0 6px">⚡ Quick Play</div>
+                                                                                                                                                                                                                               <p class="muted">Jump into a game instantly</p>
+                                                                                                                                                                                                                                 <div class="tabs" id="time-tabs">
+                                                                                                                                                                                                                                    <div class="tab" onclick="selectTime(1,this)">1m<br><small>Bullet</small></div>
+                                                                                                                                                                                                                                       <div class="tab" onclick="selectTime(3,this)">3m<br><small>Blitz</small></div>
+                                                                                                                                                                                                                                          <div class="tab" onclick="selectTime(5,this)">5m<br><small>Blitz</small></div>
+                                                                                                                                                                                                                                             <div class="tab on" onclick="selectTime(10,this)">10m<br><small>Rapid</small></div>
+                                                                                                                                                                                                                                                <div class="tab" onclick="selectTime(15,this)">15m<br><small>Rapid</small></div>
+                                                                                                                                                                                                                                                   <div class="tab" onclick="selectTime(30,this)">30m<br><small>Classic</small></div>
+                                                                                                                                                                                                                                                     </div>
+                                                                                                                                                                                                                                                       <button class="btn btn-grad" onclick="findMatch()">⚔️ Find Match</button>
+                                                                                                                                                                                                                                                         <div class="field">🔑<input id="join-code-input" maxlength="6" placeholder="Join with room code" style="letter-spacing:4px;text-transform:uppercase"><button class="btn btn-dark btn-sm" onclick="joinFromInput()">Join</button></div>
+                                                                                                                                                                                                                                                          </div>
+                                                                                                                                                                                                                                                           <div class="card">
+                                                                                                                                                                                                                                                             <div class="sec" style="margin:0 0 6px">👑 Play by Rating</div>
+                                                                                                                                                                                                                                                               <p class="muted">Your rating: <span id="p-rating2" style="color:var(--green)">1200</span></p>
+                                                                                                                                                                                                                                                                 <div class="tabs">
+                                                                                                                                                                                                                                                                    <div class="tab" onclick="alert('Searching under 1000…')"><1000</div>
+                                                                                                                                                                                                                                                                       <div class="tab" onclick="alert('Searching 1000-1200…')">1000-1200</div>
+                                                                                                                                                                                                                                                                          <div class="tab on">1200-1400</div>
+                                                                                                                                                                                                                                                                             <div class="tab" onclick="alert('Searching 1400-1600…')">1400-1600</div>
+                                                                                                                                                                                                                                                                                <div class="tab" onclick="alert('Searching 1600+…')">1600+</div>
+                                                                                                                                                                                                                                                                                  </div>
+                                                                                                                                                                                                                                                                                   </div>
+                                                                                                                                                                                                                                                                                    <div class="grid g2">
+                                                                                                                                                                                                                                                                                      <div class="card" style="margin:0">
+                                                                                                                                                                                                                                                                                         <div class="sec" style="margin:0 0 6px">📅 Daily Challenges</div>
+                                                                                                                                                                                                                                                                                            <p class="muted">New in <span id="dl-timer">--:--:--</span></p>
+                                                                                                                                                                                                                                                                                               <p style="margin:6px 0"><b>Challenge of the Day</b><br><sp
+=======
 <!-- AUTH -->
 <div id="auth-screen" class="screen active">
  <div class="topbar"><div class="back">←</div><div class="hchip">🌐 English</div></div>
@@ -857,7 +1139,7 @@ function updateUI(){if(!userData)return;const u=userData;
  set('lb-name',u.username);set('lb-rating',u.rating);set('lb-best',u.rating);
  set('h-wins',u.wins||0);set('h-loss',u.losses||0);set('h-draw',u.draws||0);
  set('pz-streak',u.streak||0);set('pz-solved',u.puzzles||0);}
- <script>
+ </script>
 let currentCode='',chatRef=null,currentChatUid=null;
 function renderHome(){if(!userData)return;
  el('home-lb').innerHTML='<div class="row" style="margin:4px 0;padding:8px"><span>🥇</span><b style="margin-left:6px">MagnusMax</b><span class="chev" style="color:var(--gold)">2450</span></div><div class="row" style="margin:4px 0;padding:8px"><span>🥈</span><b style="margin-left:6px">KnightRider</b><span class="chev" style="color:var(--gold)">2387</span></div><div class="row" style="margin:4px 0;padding:8px;border:1px solid var(--green)"><span>23</span><b style="margin-left:6px;color:var(--green)">'+(userData.username||'You')+'</b><span class="chev" style="color:var(--gold)">'+(userData.rating||1200)+'</span></div>';
@@ -1239,3 +1521,5 @@ console.log('♟ CHESSMATE v2 LOADED — Think. Plan. Win. 👑');
 </script>
 </body>
 </html>
+
+>>>>>>> 45dcb1726eda300dba3cfbf4e1668e6b2b1164c9
